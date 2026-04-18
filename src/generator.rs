@@ -17,14 +17,15 @@ pub struct SearchIndexEntry {
 
 pub struct VerdocsParser<'a> {
     config: &'a Config,
+    all_versions: Vec<String>,
 }
 
 impl<'a> VerdocsParser<'a> {
-    pub fn new(config: &'a Config) -> Self {
-        Self { config }
+    pub fn new(config: &'a Config, all_versions: Vec<String>) -> Self {
+        Self { config, all_versions }
     }
 
-    pub fn parse(&self, markdown: &str, version: u64) -> String {
+    pub fn parse(&self, markdown: &str, current_version: &str, version_timestamp: u64) -> String {
         let mut options = Options::empty();
         options.insert(Options::ENABLE_STRIKETHROUGH);
         options.insert(Options::ENABLE_TABLES);
@@ -38,7 +39,7 @@ impl<'a> VerdocsParser<'a> {
         let mut html_body = String::new();
         html::push_html(&mut html_body, events.into_iter());
 
-        wrap_html(&html_body, &self.config.title, version)
+        wrap_html(&html_body, &self.config.title, current_version, &self.all_versions, version_timestamp)
     }
 
     fn apply_modifiers(&self, events: Vec<Event<'a>>) -> Vec<Event<'a>> {
@@ -50,7 +51,6 @@ impl<'a> VerdocsParser<'a> {
         let re_start = Regex::new(r#"(?s)\{([A-Z]+)(?:\s+type="([^"]*)")?(?:\s+title="([^"]*)")?\}"#).unwrap();
         let re_end = Regex::new(r#"\{/[A-Z]+\}"#).unwrap();
 
-        // Use a stack to track whether we should close with </div> or </span>
         let mut tag_stack = Vec::new();
 
         let mut i = 0;
@@ -59,12 +59,9 @@ impl<'a> VerdocsParser<'a> {
 
             match event {
                 Event::Start(Tag::Paragraph) => {
-                    // Peek ahead to see if this is a "tag-only" paragraph (Start -> Text -> End)
                     if let Some(Event::Text(text)) = events.get(i + 1) {
                         if let Some(Event::End(TagEnd::Paragraph)) = events.get(i + 2) {
                             let trimmed = text.trim();
-                            
-                            // Check for Standalone Start Tag
                             if let Some(caps) = re_start.captures(trimmed) {
                                 if caps[0].len() == trimmed.len() {
                                     let tag_name = caps[1].to_lowercase();
@@ -81,8 +78,6 @@ impl<'a> VerdocsParser<'a> {
                                     }
                                 }
                             }
-                            
-                            // Check for Standalone End Tag
                             if re_end.is_match(trimmed) && trimmed.len() == re_end.find(trimmed).unwrap().as_str().len() {
                                 let close_tag = tag_stack.pop().unwrap_or("div");
                                 new_events.push(Event::Html(format!("</{}>", close_tag).into()));
@@ -97,9 +92,6 @@ impl<'a> VerdocsParser<'a> {
                     let mut final_content = text.to_string();
                     let mut has_tags = false;
 
-                    // 1. Process Start Tags
-                    // Note: This naive replacement doesn't handle nested tags within the SAME text block perfectly,
-                    // but it works for standard usage.
                     while let Some(caps) = re_start.captures(&final_content) {
                         has_tags = true;
                         let full_match = caps[0].to_string();
@@ -120,7 +112,6 @@ impl<'a> VerdocsParser<'a> {
                         }
                     }
 
-                    // 2. Process End Tags
                     while let Some(mat) = re_end.find(&final_content) {
                         has_tags = true;
                         let full_match = mat.as_str();
@@ -141,7 +132,6 @@ impl<'a> VerdocsParser<'a> {
             i += 1;
         }
 
-        // Close any dangling tags
         while let Some(close_tag) = tag_stack.pop() {
             new_events.push(Event::Html(format!("</{}>", close_tag).into()));
         }
@@ -164,7 +154,7 @@ impl<'a> VerdocsParser<'a> {
     }
 }
 
-pub fn generate_site(src_path: &PathBuf, version: u64) -> Result<()> {
+pub fn generate_site(src_path: &PathBuf, version_timestamp: u64) -> Result<()> {
     let config_path = src_path.join("config.yml");
     let config_content = fs::read_to_string(&config_path)
         .with_context(|| format!("Could not read config file at {:?}", config_path))?;
@@ -183,8 +173,23 @@ pub fn generate_site(src_path: &PathBuf, version: u64) -> Result<()> {
         copy(&assets_src, &out_dir, &options)?;
     }
 
-    let verdocs_parser = VerdocsParser::new(&config);
+    // 1. Gather all version names
+    let mut all_versions = Vec::new();
+    for entry in fs::read_dir(src_path)? {
+        let entry = entry?;
+        let path = entry.path();
+        if path.is_dir() {
+            let dir_name = path.file_name().unwrap().to_str().unwrap();
+            if dir_name.starts_with('v') {
+                all_versions.push(dir_name.to_string());
+            }
+        }
+    }
+    all_versions.sort(); // Keep them in order
 
+    let verdocs_parser = VerdocsParser::new(&config, all_versions);
+
+    // 2. Process each version
     for entry in fs::read_dir(src_path)? {
         let entry = entry?;
         let path = entry.path();
@@ -192,7 +197,7 @@ pub fn generate_site(src_path: &PathBuf, version: u64) -> Result<()> {
         if path.is_dir() {
             let dir_name = path.file_name().unwrap().to_str().unwrap();
             if dir_name.starts_with('v') {
-                process_version(&path, &out_dir.join(dir_name), dir_name, &verdocs_parser, version)?;
+                process_version(&path, &out_dir.join(dir_name), dir_name, &verdocs_parser, version_timestamp)?;
             }
         }
     }
@@ -200,7 +205,7 @@ pub fn generate_site(src_path: &PathBuf, version: u64) -> Result<()> {
     Ok(())
 }
 
-fn process_version(version_src: &Path, version_out: &Path, version_name: &str, parser: &VerdocsParser, version: u64) -> Result<()> {
+fn process_version(version_src: &Path, version_out: &Path, version_name: &str, parser: &VerdocsParser, version_timestamp: u64) -> Result<()> {
     fs::create_dir_all(version_out)?;
     let mut search_index = Vec::new();
 
@@ -210,7 +215,7 @@ fn process_version(version_src: &Path, version_out: &Path, version_name: &str, p
 
         if path.extension().map_or(false, |ext| ext == "md") {
             let content = fs::read_to_string(path)?;
-            let full_html = parser.parse(&content, version);
+            let full_html = parser.parse(&content, version_name, version_timestamp);
 
             let relative_path = path.strip_prefix(version_src)?;
             let mut html_path = version_out.join(relative_path);
@@ -252,19 +257,42 @@ fn hex_to_rgba(hex: &str, opacity: f32) -> String {
     format!("rgba({}, {}, {}, {})", r, g, b, opacity)
 }
 
-fn wrap_html(body: &str, title: &str, version: u64) -> String {
+fn wrap_html(body: &str, title: &str, current_version: &str, all_versions: &[String], version_timestamp: u64) -> String {
+    let version_options: String = all_versions.iter().map(|v| {
+        format!(r#"<option value="{}" {}>{}</option>"#, v, if v == current_version { "selected" } else { "" }, v)
+    }).collect::<Vec<_>>().join("\n");
+
     format!(r#"<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
     <title>{}</title>
     <style>
-        body {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; padding: 2rem; max-width: 800px; margin: 0 auto; line-height: 1.6; color: #333; }}
+        body {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; padding: 2rem; max-width: 800px; margin: 40px auto 0 auto; line-height: 1.6; color: #333; }}
         h1, h2, h3, h4, h5, h6 {{ color: #222; margin-top: 1.5em; }}
         code {{ background: #f4f4f4; padding: 0.2em 0.4em; border-radius: 3px; font-family: monospace; }}
         pre {{ background: #f4f4f4; padding: 1em; border-radius: 5px; overflow-x: auto; }}
         .admonition > *:first-child {{ margin-top: 0; }}
         .admonition > *:last-child {{ margin-bottom: 0; }}
+        
+        #version-selector {{
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            background: #fff;
+            padding: 5px 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            z-index: 1000;
+        }}
+        #version-selector select {{
+            border: none;
+            font-family: inherit;
+            font-size: 14px;
+            cursor: pointer;
+            outline: none;
+        }}
     </style>
     <script>
         window.__verdocs_version = "{}";
@@ -277,10 +305,31 @@ fn wrap_html(body: &str, title: &str, version: u64) -> String {
                     }}
                 }});
         }}, 1000);
+
+        function switchVersion(newVersion) {{
+            const currentPath = window.location.pathname;
+            const pathParts = currentPath.split('/');
+            // Expecting path like /v1.0.0/path/to/page.html
+            // In local dev server, it might be /v1.0.0/...
+            // We find the index of the current version and replace it.
+            const versionIndex = pathParts.findIndex(part => part === "{}");
+            if (versionIndex !== -1) {{
+                pathParts[versionIndex] = newVersion;
+                window.location.pathname = pathParts.join('/');
+            }} else {{
+                // Fallback: if we can't find version in path, just go to root of new version
+                window.location.pathname = '/' + newVersion + '/home.html';
+            }}
+        }}
     </script>
 </head>
 <body>
+    <div id="version-selector">
+        <select onchange="switchVersion(this.value)">
+            {}
+        </select>
+    </div>
     {}
 </body>
-</html>"#, title, version, body)
+</html>"#, title, version_timestamp, current_version, version_options, body)
 }

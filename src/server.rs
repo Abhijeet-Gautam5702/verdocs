@@ -2,6 +2,7 @@ use anyhow::{Result, anyhow};
 use std::fs;
 use std::path::PathBuf;
 use tiny_http::{Header, Response, Server};
+use regex::Regex;
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -10,8 +11,8 @@ pub fn start_server(out_dir: &PathBuf, port: u16, version: Arc<AtomicU64>) -> Re
     let addr = format!("127.0.0.1:{}", port);
     let server = Server::http(&addr).map_err(|e| anyhow!("Failed to start server: {}", e))?;
 
-    println!("Preview server running at: http://{}/<version>/home", addr);
-    println!("Press Ctrl+C to stop the server");
+    println!("Preview server running at: http://{}", addr);
+    println!("Press Ctrl+C to stop.");
 
     for request in server.incoming_requests() {
         let url = request.url();
@@ -49,12 +50,42 @@ pub fn start_server(out_dir: &PathBuf, port: u16, version: Arc<AtomicU64>) -> Re
                 continue;
             }
 
-            let response = Response::from_string("404: Not Found").with_status_code(404);
+            let response = Response::from_string(render_404(&path))
+                .with_header(Header::from_bytes(&b"Content-Type"[..], "text/html").unwrap())
+                .with_status_code(404);
             let _ = request.respond(response);
         }
     }
 
     Ok(())
+}
+
+fn render_404(path: &str) -> String {
+    let re = Regex::new(r"^(v[0-9][^/]*)/").unwrap();
+    let version_info = if let Some(caps) = re.captures(path) {
+        format!(" on version <strong>{}</strong>", &caps[1])
+    } else {
+        "".to_string()
+    };
+
+    format!(r#"<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>404 - Not Found</title>
+    <style>
+        body {{ font-family: -apple-system, sans-serif; padding: 4rem; text-align: center; color: #333; }}
+        h1 {{ font-size: 3rem; margin-bottom: 1rem; }}
+        p {{ font-size: 1.2rem; color: #666; }}
+        .home-link {{ display: inline-block; margin-top: 2rem; color: #007bff; text-decoration: none; font-weight: bold; }}
+    </style>
+</head>
+<body>
+    <h1>404</h1>
+    <p>The section you're looking for doesn't exist{}.</p>
+    <a href="javascript:history.back()" class="home-link">← Go back to where you were</a>
+</body>
+</html>"#, version_info)
 }
 
 fn get_mime_type(path: &std::path::Path) -> &str {
