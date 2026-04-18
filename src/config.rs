@@ -5,6 +5,8 @@ use std::collections::HashMap;
 pub struct Config {
     pub title: String,
     pub description: String,
+    pub navbar_logo: Option<String>,
+    pub favicon: Option<String>,
     pub theme: ThemeConfig,
 }
 

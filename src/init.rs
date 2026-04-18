@@ -25,7 +25,9 @@ pub fn init_project(path: &PathBuf) -> Result<()> {
     // Create v1.1.0 - Feature Update
     create_v1_1_0(path)?;
 
-    let config = Config::default();
+    let mut config = Config::default();
+    config.navbar_logo = Some("verdocs-logo.png".to_string());
+    config.favicon = Some("verdocs-logo.png".to_string());
     let config_yaml = serde_yaml::to_string(&config)?;
     fs::write(path.join("config.yml"), config_yaml)?;
 

@@ -121,7 +121,7 @@ impl<'a> VerdocsParser<'a> {
         // 4. Wrap in full HTML template
         let full_html = wrap_html(
             &html_body,
-            &self.config.title,
+            self.config,
             current_version,
             current_route,
             &self.all_versions,
@@ -434,6 +434,20 @@ pub fn generate_site(src_path: &PathBuf, version_timestamp: u64) -> Result<()> {
         .with_context(|| format!("Could not read config file at {:?}", config_path))?;
     let config: Config = serde_yaml::from_str(&config_content)?;
 
+    if let Some(ref logo) = config.navbar_logo {
+        let logo_path = src_path.join("assets").join(logo);
+        if !logo_path.exists() {
+            return Err(anyhow!("Navbar logo not found at: {:?}", logo_path));
+        }
+    }
+
+    if let Some(ref favicon) = config.favicon {
+        let favicon_path = src_path.join("assets").join(favicon);
+        if !favicon_path.exists() {
+            return Err(anyhow!("Favicon not found at: {:?}", favicon_path));
+        }
+    }
+
     let out_dir = src_path.join("out");
     if out_dir.exists() {
         fs::remove_dir_all(&out_dir)?;
@@ -657,7 +671,7 @@ fn hex_to_rgba(hex: &str, opacity: f32) -> String {
 
 fn wrap_html(
     body: &str,
-    title: &str,
+    config: &Config,
     current_version: &str,
     current_route: &str,
     all_versions: &[String],
@@ -714,12 +728,28 @@ fn wrap_html(
         String::new()
     };
 
+    let navbar_logo_html = if let Some(ref logo) = config.navbar_logo {
+        format!(
+            r#"<img src="/assets/{}" alt="Logo" style="height: 32px; cursor: pointer;" onclick="window.location.href='/{}/home'">"#,
+            logo, current_version
+        )
+    } else {
+        String::new()
+    };
+
+    let favicon_html = if let Some(ref favicon) = config.favicon {
+        format!(r#"<link rel="icon" href="/assets/{}">"#, favicon)
+    } else {
+        String::new()
+    };
+
     format!(
         r##"<!DOCTYPE html>
-<html style="scroll-padding-top: 40px;">
+<html style="scroll-padding-top: 80px;">
 <head>
     <meta charset="UTF-8">
     <title>{}</title>
+    {}
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
     <style>
         :root {{
@@ -728,6 +758,7 @@ fn wrap_html(
             --text-color: #333333;
             --sidebar-width: 260px;
             --minimap-width: 240px;
+            --navbar-height: 60px;
         }}
         body {{
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
@@ -735,14 +766,31 @@ fn wrap_html(
             display: flex;
             background: var(--bg-color);
             color: var(--text-color);
+            height: 100vh;
+            overflow: hidden;
+        }}
+
+        #navbar {{
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: var(--navbar-height);
+            background: #fff;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 40px;
+            z-index: 1000;
         }}
 
         #sidebar {{
             width: var(--sidebar-width);
-            height: 100vh;
+            height: calc(100vh - var(--navbar-height));
             position: fixed;
             left: 0;
-            top: 0;
+            top: var(--navbar-height);
             border-right: 1px solid #eee;
             background: #fcfcfc;
             overflow-y: auto;
@@ -752,10 +800,10 @@ fn wrap_html(
 
         #minimap {{
             width: var(--minimap-width);
-            height: 100vh;
+            height: calc(100vh - var(--navbar-height));
             position: fixed;
             right: 0;
-            top: 0;
+            top: var(--navbar-height);
             border-left: 1px solid #eee;
             background: #fcfcfc;
             overflow-y: auto;
@@ -768,20 +816,20 @@ fn wrap_html(
             {}
             padding: 2rem 4rem 10rem 4rem;
             flex-grow: 1;
-            margin-top: 40px;
+            margin-top: var(--navbar-height);
             max-width: 1000px;
             position: relative;
+            height: calc(100vh - var(--navbar-height));
+            overflow-y: auto;
+            box-sizing: border-box;
         }}
 
         #search-bar-trigger {{
-            position: absolute;
-            top: -20px;
-            right: 4rem;
             padding: 6px 12px;
-            background: #fff;
-            border: 1px solid #ddd;
+            background: #f3f4f6;
+            border: 1px solid #e5e7eb;
             border-radius: 6px;
-            color: #999;
+            color: #6b7280;
             font-size: 13px;
             cursor: pointer;
             width: 200px;
@@ -789,6 +837,11 @@ fn wrap_html(
             display: flex;
             justify-content: space-between;
             align-items: center;
+            transition: all 0.2s;
+        }}
+        #search-bar-trigger:hover {{
+            background: #e5e7eb;
+            border-color: #d1d5db;
         }}
 
         #search-modal {{
@@ -891,11 +944,11 @@ fn wrap_html(
         li {{ margin-bottom: 8px; }}
         #main-content a {{
             color: inherit;
-            text-decoration: none;
+            text-decoration: underline;
             cursor: pointer;
         }}
         #main-content a:hover {{
-            text-decoration: underline;
+            text-decoration: none;
         }}
         code {{
             background: #f1f1f1;
@@ -965,11 +1018,24 @@ fn wrap_html(
         }}
         #version-selector-container select {{
             width: 100%;
-            padding: 5px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            background: #fff;
+            padding: 8px 12px;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            background: #f9fafb;
+            color: #374151;
             outline: none;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+            background-size: 14px;
+        }}
+        #version-selector-container select:hover {{
+            background-color: #f3f4f6;
+            border-color: #d1d5db;
         }}
         .toc-title {{
             font-size: 11px;
@@ -1156,6 +1222,17 @@ fn wrap_html(
             <div id="search-results"></div>
         </div>
     </div>
+    <div id="navbar">
+        <div id="navbar-left">
+            {}
+        </div>
+        <div id="navbar-right">
+            <div id="search-bar-trigger" onclick="openSearch()">
+                <span>Search...</span>
+                <span style="font-size: 11px; color: #bbb;">⌘K</span>
+            </div>
+        </div>
+    </div>
     <div id="sidebar">
         <div id="version-selector-container">
             <select onchange="switchVersion(this.value)">
@@ -1165,26 +1242,23 @@ fn wrap_html(
         {}
     </div>
     <div id="main-content">
-        <div id="search-bar-trigger" onclick="openSearch()">
-            <span>Search...</span>
-            <span style="font-size: 11px; color: #bbb;">⌘K</span>
-        </div>
         {}
     </div>
     {}
 </body>
 </html>"##,
-        title,
+        config.title,
+        favicon_html,
         main_content_style,
         version_timestamp,
         current_version,
+        navbar_logo_html,
         version_options,
         sidebar_html,
         body,
         minimap_html
     )
 }
-
 fn render_sidebar(
     items: &[SidebarItem],
     version: &str,
