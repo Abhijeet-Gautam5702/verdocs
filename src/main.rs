@@ -99,7 +99,7 @@ fn main() -> Result<()> {
 
             let url = format!("http://localhost:{}/v1.0.0/home", port);
             println!("Starting preview server at {} ...", url);
-            start_server(&abs_out, *port, version)?;
+            start_server(path, *port, version)?;
         }
         Commands::Clean { path, full } => {
             clean_project(path, *full)?;

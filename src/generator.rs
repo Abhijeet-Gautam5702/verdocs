@@ -1,12 +1,12 @@
-use std::path::{Path, PathBuf};
-use anyhow::{Result, Context, anyhow};
-use std::fs;
-use serde::{Deserialize, Serialize};
-use walkdir::WalkDir;
-use pulldown_cmark::{Parser as MarkdownParser, Options, html, Event, Tag, TagEnd};
-use fs_extra::dir::{copy, CopyOptions};
 use crate::config::Config;
+use anyhow::{Context, Result, anyhow};
+use fs_extra::dir::{CopyOptions, copy};
+use pulldown_cmark::{Event, Options, Parser as MarkdownParser, Tag, TagEnd, html};
 use regex::Regex;
+use serde::{Deserialize, Serialize};
+use std::fs;
+use std::path::{Path, PathBuf};
+use walkdir::WalkDir;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SearchIndexEntry {
@@ -36,46 +36,63 @@ pub struct VerdocsParser<'a> {
 
 impl<'a> VerdocsParser<'a> {
     pub fn new(config: &'a Config, all_versions: Vec<String>) -> Self {
-        Self { config, all_versions }
+        Self {
+            config,
+            all_versions,
+        }
     }
 
-    pub fn parse(&self, markdown: &str, current_version: &str, current_route: &str, sidebar: &[SidebarItem], version_timestamp: u64) -> String {
+    pub fn parse(
+        &self,
+        markdown: &str,
+        current_version: &str,
+        current_route: &str,
+        sidebar: &[SidebarItem],
+        version_timestamp: u64,
+    ) -> (String, Vec<TocItem>, String) {
         let mut options = Options::empty();
         options.insert(Options::ENABLE_STRIKETHROUGH);
         options.insert(Options::ENABLE_TABLES);
         options.insert(Options::ENABLE_TASKLISTS);
-        
+
         let parser = MarkdownParser::new_ext(markdown, options);
         let mut events: Vec<Event> = parser.collect();
 
-        // 1. Extract TOC and inject IDs into headings
+        // 1. Extract TOC and H1 Title
         let mut toc = Vec::new();
+        let mut h1_title = String::new();
         let mut new_events = Vec::new();
         let mut i = 0;
         while i < events.len() {
             let event = &events[i];
             if let Event::Start(Tag::Heading { level, .. }) = event {
                 let level_num = *level as u32;
-                if level_num >= 2 {
-                    let mut heading_text = String::new();
-                    let mut j = i + 1;
-                    while j < events.len() {
-                        match &events[j] {
-                            Event::Text(t) | Event::Code(t) => heading_text.push_str(t),
-                            Event::End(TagEnd::Heading(_)) => break,
-                            _ => {}
-                        }
-                        j += 1;
+
+                let mut heading_text = String::new();
+                let mut j = i + 1;
+                while j < events.len() {
+                    match &events[j] {
+                        Event::Text(t) | Event::Code(t) => heading_text.push_str(t),
+                        Event::End(TagEnd::Heading(_)) => break,
+                        _ => {}
                     }
-                    
+                    j += 1;
+                }
+
+                if level_num == 1 && h1_title.is_empty() {
+                    h1_title = heading_text.clone();
+                }
+
+                if level_num >= 2 {
                     let id = slugify(&heading_text);
                     toc.push(TocItem {
                         title: heading_text.clone(),
                         id: id.clone(),
                         level: level_num,
                     });
-
-                    new_events.push(Event::Html(format!("<h{} id=\"{}\">", level_num, id).into()));
+                    new_events.push(Event::Html(
+                        format!("<h{} id=\"{}\">", level_num, id).into(),
+                    ));
                     i += 1;
                     while i < events.len() {
                         if let Event::End(TagEnd::Heading(_)) = &events[i] {
@@ -102,10 +119,26 @@ impl<'a> VerdocsParser<'a> {
         html::push_html(&mut html_body, events.into_iter());
 
         // 4. Wrap in full HTML template
-        wrap_html(&html_body, &self.config.title, current_version, current_route, &self.all_versions, sidebar, &toc, version_timestamp)
+        let full_html = wrap_html(
+            &html_body,
+            &self.config.title,
+            current_version,
+            current_route,
+            &self.all_versions,
+            sidebar,
+            &toc,
+            version_timestamp,
+        );
+
+        (full_html, toc, h1_title)
     }
 
-    fn apply_modifiers(&self, events: Vec<Event<'a>>, current_version: &str, current_route: &str) -> Vec<Event<'a>> {
+    fn apply_modifiers(
+        &self,
+        events: Vec<Event<'a>>,
+        current_version: &str,
+        current_route: &str,
+    ) -> Vec<Event<'a>> {
         let events = self.modifier_tags(events);
         let events = self.modifier_links(events, current_version, current_route);
         self.modifier_images(events)
@@ -114,7 +147,13 @@ impl<'a> VerdocsParser<'a> {
     fn modifier_images(&self, events: Vec<Event<'a>>) -> Vec<Event<'a>> {
         let mut new_events = Vec::new();
         for event in events {
-            if let Event::Start(Tag::Image { link_type, dest_url, title, id }) = event {
+            if let Event::Start(Tag::Image {
+                link_type,
+                dest_url,
+                title,
+                id,
+            }) = event
+            {
                 let dest = dest_url.to_string();
                 let final_dest = if dest.starts_with("assets/") {
                     format!("/{}", dest)
@@ -134,19 +173,29 @@ impl<'a> VerdocsParser<'a> {
         new_events
     }
 
-    fn modifier_links(&self, events: Vec<Event<'a>>, current_version: &str, current_route: &str) -> Vec<Event<'a>> {
+    fn modifier_links(
+        &self,
+        events: Vec<Event<'a>>,
+        current_version: &str,
+        current_route: &str,
+    ) -> Vec<Event<'a>> {
         let mut new_events = Vec::new();
         let mut i = 0;
         while i < events.len() {
             match &events[i] {
-                Event::Start(Tag::Link { link_type, dest_url, title, id }) => {
+                Event::Start(Tag::Link {
+                    link_type,
+                    dest_url,
+                    title,
+                    id,
+                }) => {
                     let dest = dest_url.to_string();
                     if dest.starts_with("http") {
                         new_events.push(Event::Html(format!(
                             r#"<a href="{}" title="{}" target="_blank" rel="noopener noreferrer">"#,
                             dest, title
                         ).into()));
-                        
+
                         i += 1;
                         let mut depth = 1;
                         while i < events.len() && depth > 0 {
@@ -164,11 +213,13 @@ impl<'a> VerdocsParser<'a> {
                                     }
                                 }
                             }
-                            if depth > 0 { i += 1; }
+                            if depth > 0 {
+                                i += 1;
+                            }
                         }
                     } else {
-                        // Resolve internal relative links
-                        let final_dest = resolve_internal_link(current_version, current_route, &dest);
+                        let final_dest =
+                            resolve_internal_link(current_version, current_route, &dest);
                         new_events.push(Event::Start(Tag::Link {
                             link_type: *link_type,
                             dest_url: final_dest.into(),
@@ -188,7 +239,8 @@ impl<'a> VerdocsParser<'a> {
 
     fn modifier_tags(&self, events: Vec<Event<'a>>) -> Vec<Event<'a>> {
         let mut new_events = Vec::new();
-        let re_start = Regex::new(r#"(?s)\{([A-Z]+)(?:\s+type="([^"]*)")?(?:\s+title="([^"]*)")?\}"#).unwrap();
+        let re_start =
+            Regex::new(r#"(?s)\{([A-Z]+)(?:\s+type="([^"]*)")?(?:\s+title="([^"]*)")?\}"#).unwrap();
         let re_end = Regex::new(r#"\{/[A-Z]+\}"#).unwrap();
 
         let mut tag_stack = Vec::new();
@@ -219,7 +271,12 @@ impl<'a> VerdocsParser<'a> {
 
                                     if let Some(color) = self.config.theme.colors.get(&tag_name) {
                                         if tag_type == Some("admonition") {
-                                            new_events.push(Event::Html(self.render_admonition_start(&tag_name, title, color).into()));
+                                            new_events.push(Event::Html(
+                                                self.render_admonition_start(
+                                                    &tag_name, title, color,
+                                                )
+                                                .into(),
+                                            ));
                                             tag_stack.push("div");
                                             i += 3;
                                             continue;
@@ -227,7 +284,9 @@ impl<'a> VerdocsParser<'a> {
                                     }
                                 }
                             }
-                            if re_end.is_match(trimmed) && trimmed.len() == re_end.find(trimmed).unwrap().as_str().len() {
+                            if re_end.is_match(trimmed)
+                                && trimmed.len() == re_end.find(trimmed).unwrap().as_str().len()
+                            {
                                 let close_tag = tag_stack.pop().unwrap_or("div");
                                 new_events.push(Event::Html(format!("</{}>", close_tag).into()));
                                 i += 3;
@@ -252,7 +311,13 @@ impl<'a> VerdocsParser<'a> {
                             let (html, close_type) = if tag_type == Some("admonition") {
                                 (self.render_admonition_start(&tag_name, title, color), "div")
                             } else {
-                                (format!(r#"<span style="color: {}; font-weight: bold;">"#, color), "span")
+                                (
+                                    format!(
+                                        r#"<span style="color: {}; font-weight: bold;">"#,
+                                        color
+                                    ),
+                                    "span",
+                                )
                             };
                             tag_stack.push(close_type);
                             final_content = final_content.replace(&full_match, &html);
@@ -265,7 +330,8 @@ impl<'a> VerdocsParser<'a> {
                         has_tags = true;
                         let full_match = mat.as_str();
                         let close_tag = tag_stack.pop().unwrap_or("span");
-                        final_content = final_content.replace(full_match, &format!("</{}>", close_tag));
+                        final_content =
+                            final_content.replace(full_match, &format!("</{}>", close_tag));
                     }
 
                     if has_tags {
@@ -291,7 +357,10 @@ impl<'a> VerdocsParser<'a> {
     fn render_admonition_start(&self, _tag_name: &str, title: Option<&str>, color: &str) -> String {
         let bg_color = hex_to_rgba(color, 0.1);
         let title_html = if let Some(t) = title {
-            format!(r#"<div style="font-weight: bold; color: {}; margin-bottom: 5px;">{}</div>"#, color, t)
+            format!(
+                r#"<div style="font-weight: bold; color: {}; margin-bottom: 5px;">{}</div>"#,
+                color, t
+            )
         } else {
             "".to_string()
         };
@@ -324,7 +393,11 @@ fn resolve_internal_link(current_version: &str, current_route: &str, dest: &str)
                 _ => {}
             }
         }
-        path_to_resolve = final_path.to_str().unwrap_or(&path_to_resolve).to_string().replace("\\", "/");
+        path_to_resolve = final_path
+            .to_str()
+            .unwrap_or(&path_to_resolve)
+            .to_string()
+            .replace("\\", "/");
     }
 
     if path_to_resolve.ends_with(".md") {
@@ -340,7 +413,11 @@ fn resolve_internal_link(current_version: &str, current_route: &str, dest: &str)
         }
     }
 
-    format!("/{}/{}", current_version, path_to_resolve.trim_start_matches('/'))
+    format!(
+        "/{}/{}",
+        current_version,
+        path_to_resolve.trim_start_matches('/')
+    )
 }
 
 fn slugify(text: &str) -> String {
@@ -388,11 +465,17 @@ pub fn generate_site(src_path: &PathBuf, version_timestamp: u64) -> Result<()> {
     for entry in fs::read_dir(src_path)? {
         let entry = entry?;
         let path = entry.path();
-        
+
         if path.is_dir() {
             let dir_name = path.file_name().unwrap().to_str().unwrap();
             if dir_name.starts_with('v') {
-                process_version(&path, &out_dir.join(dir_name), dir_name, &verdocs_parser, version_timestamp)?;
+                process_version(
+                    &path,
+                    &out_dir.join(dir_name),
+                    dir_name,
+                    &verdocs_parser,
+                    version_timestamp,
+                )?;
             }
         }
     }
@@ -400,16 +483,24 @@ pub fn generate_site(src_path: &PathBuf, version_timestamp: u64) -> Result<()> {
     Ok(())
 }
 
-fn process_version(version_src: &Path, version_out: &Path, version_name: &str, parser: &VerdocsParser, version_timestamp: u64) -> Result<()> {
+fn process_version(
+    version_src: &Path,
+    version_out: &Path,
+    version_name: &str,
+    parser: &VerdocsParser,
+    version_timestamp: u64,
+) -> Result<()> {
     fs::create_dir_all(version_out)?;
     let mut search_index = Vec::new();
 
     for entry in WalkDir::new(version_src) {
         let entry = entry?;
         let path = entry.path();
-        
+
         if path.is_dir() {
-            if path == version_src { continue; }
+            if path == version_src {
+                continue;
+            }
             let dir_name = path.file_name().unwrap().to_str().unwrap();
             let index_md = path.join(format!("{}.md", dir_name));
             if !index_md.exists() {
@@ -428,15 +519,17 @@ fn process_version(version_src: &Path, version_out: &Path, version_name: &str, p
             let content = fs::read_to_string(path)?;
             let relative_path = path.strip_prefix(version_src)?;
             let file_stem = path.file_stem().unwrap().to_str().unwrap();
-            
+
             let mut route_parts = Vec::new();
             for component in relative_path.components() {
                 let name = component.as_os_str().to_str().unwrap();
                 if name.ends_with(".md") {
-                    let stem = &name[..name.len()-3];
+                    let stem = &name[..name.len() - 3];
                     if let Some(parent) = relative_path.parent() {
                         if let Some(parent_name) = parent.file_name().and_then(|n| n.to_str()) {
-                            if stem == parent_name { continue; }
+                            if stem == parent_name {
+                                continue;
+                            }
                         }
                     }
                     route_parts.push(stem);
@@ -444,10 +537,11 @@ fn process_version(version_src: &Path, version_out: &Path, version_name: &str, p
                     route_parts.push(name);
                 }
             }
-            
+
             let route = route_parts.join("/");
-            let full_html = parser.parse(&content, version_name, &route, &sidebar, version_timestamp);
-            
+            let (full_html, _toc, h1_title) =
+                parser.parse(&content, version_name, &route, &sidebar, version_timestamp);
+
             let mut html_path = version_out.join(&route);
             if !route.is_empty() {
                 fs::create_dir_all(&html_path)?;
@@ -463,9 +557,13 @@ fn process_version(version_src: &Path, version_out: &Path, version_name: &str, p
             fs::write(&html_path, &full_html)?;
 
             search_index.push(SearchIndexEntry {
-                title: file_stem.to_string(),
+                title: if h1_title.is_empty() {
+                    file_stem.to_string()
+                } else {
+                    h1_title
+                },
                 route,
-                content: content.chars().take(200).collect(),
+                content: content.clone(),
             });
         }
     }
@@ -473,7 +571,10 @@ fn process_version(version_src: &Path, version_out: &Path, version_name: &str, p
     let search_index_dir = version_out.parent().unwrap().join("search-index");
     fs::create_dir_all(&search_index_dir)?;
     let search_index_json = serde_json::to_string_pretty(&search_index)?;
-    fs::write(search_index_dir.join(format!("{}.json", version_name.replace('.', "-"))), search_index_json)?;
+    fs::write(
+        search_index_dir.join(format!("{}.json", version_name.replace('.', "-"))),
+        search_index_json,
+    )?;
 
     Ok(())
 }
@@ -482,12 +583,16 @@ fn build_sidebar(current_dir: &Path, root_dir: &Path) -> Result<Vec<SidebarItem>
     let mut items = Vec::new();
     let entries = fs::read_dir(current_dir)?;
     let mut paths: Vec<_> = entries.map(|e| e.unwrap().path()).collect();
-    
+
     paths.sort_by(|a, b| {
         let a_name = a.file_name().unwrap().to_str().unwrap().to_lowercase();
         let b_name = b.file_name().unwrap().to_str().unwrap().to_lowercase();
-        if a_name == "home" { return std::cmp::Ordering::Less; }
-        if b_name == "home" { return std::cmp::Ordering::Greater; }
+        if a_name == "home" {
+            return std::cmp::Ordering::Less;
+        }
+        if b_name == "home" {
+            return std::cmp::Ordering::Greater;
+        }
         a_name.cmp(&b_name)
     });
 
@@ -503,10 +608,19 @@ fn build_sidebar(current_dir: &Path, root_dir: &Path) -> Result<Vec<SidebarItem>
             });
         } else if path.extension().map_or(false, |ext| ext == "md") {
             let stem = path.file_stem().unwrap().to_str().unwrap();
-            let parent_name = current_dir.file_name().and_then(|n| n.to_str()).unwrap_or("");
-            if stem == parent_name { continue; }
+            let parent_name = current_dir
+                .file_name()
+                .and_then(|n| n.to_str())
+                .unwrap_or("");
+            if stem == parent_name {
+                continue;
+            }
             let relative_path = path.strip_prefix(root_dir)?;
-            let route = relative_path.with_extension("").to_str().unwrap().replace("\\", "/");
+            let route = relative_path
+                .with_extension("")
+                .to_str()
+                .unwrap()
+                .replace("\\", "/");
             items.push(SidebarItem {
                 title: to_title_case(stem),
                 route,
@@ -518,37 +632,66 @@ fn build_sidebar(current_dir: &Path, root_dir: &Path) -> Result<Vec<SidebarItem>
 }
 
 fn to_title_case(s: &str) -> String {
-    s.split('-').map(|word| {
-        let mut c = word.chars();
-        match c.next() {
-            None => String::new(),
-            Some(f) => f.to_uppercase().collect::<String>() + c.as_str(),
-        }
-    }).collect::<Vec<_>>().join(" ")
+    s.split('-')
+        .map(|word| {
+            let mut c = word.chars();
+            match c.next() {
+                None => String::new(),
+                Some(f) => f.to_uppercase().collect::<String>() + c.as_str(),
+            }
+        })
+        .collect::<Vec<_>>()
+        .join(" ")
 }
 
 fn hex_to_rgba(hex: &str, opacity: f32) -> String {
     let hex = hex.trim_start_matches('#');
-    if hex.len() != 6 { return format!("rgba(0,0,0,{})", opacity); }
+    if hex.len() != 6 {
+        return format!("rgba(0,0,0,{})", opacity);
+    }
     let r = u8::from_str_radix(&hex[0..2], 16).unwrap_or(0);
     let g = u8::from_str_radix(&hex[2..4], 16).unwrap_or(0);
     let b = u8::from_str_radix(&hex[4..6], 16).unwrap_or(0);
     format!("rgba({}, {}, {}, {})", r, g, b, opacity)
 }
 
-fn wrap_html(body: &str, title: &str, current_version: &str, current_route: &str, all_versions: &[String], sidebar: &[SidebarItem], toc: &[TocItem], version_timestamp: u64) -> String {
-    let version_options: String = all_versions.iter().map(|v| {
-        format!(r#"<option value="{}" {}>{}</option>"#, v, if v == current_version { "selected" } else { "" }, v)
-    }).collect::<Vec<_>>().join("\n");
+fn wrap_html(
+    body: &str,
+    title: &str,
+    current_version: &str,
+    current_route: &str,
+    all_versions: &[String],
+    sidebar: &[SidebarItem],
+    toc: &[TocItem],
+    version_timestamp: u64,
+) -> String {
+    let version_options: String = all_versions
+        .iter()
+        .map(|v| {
+            format!(
+                r#"<option value="{}" {}>{}</option>"#,
+                v,
+                if v == current_version { "selected" } else { "" },
+                v
+            )
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
 
     let sidebar_html = render_sidebar(sidebar, current_version, current_route, 0);
-    
+
     let has_toc = !toc.is_empty();
     let toc_html: String = if has_toc {
-        toc.iter().map(|item| {
-            let indent = (item.level - 2) * 15;
-            format!(r##"<a href="#{}" class="toc-item" style="padding-left: {}px;">{}</a>"##, item.id, indent, item.title)
-        }).collect::<Vec<_>>().join("\n")
+        toc.iter()
+            .map(|item| {
+                let indent = (item.level - 2) * 15;
+                format!(
+                    r##"<a href="#{}" class="toc-item" style="padding-left: {}px;">{}</a>"##,
+                    item.id, indent, item.title
+                )
+            })
+            .collect::<Vec<_>>()
+            .join("\n")
     } else {
         String::new()
     };
@@ -560,15 +703,19 @@ fn wrap_html(body: &str, title: &str, current_version: &str, current_route: &str
     };
 
     let minimap_html = if has_toc {
-        format!(r##"<div id="minimap">
+        format!(
+            r##"<div id="minimap">
         <div class="toc-title">On this page</div>
         {}
-    </div>"##, toc_html)
+    </div>"##,
+            toc_html
+        )
     } else {
         String::new()
     };
 
-    format!(r##"<!DOCTYPE html>
+    format!(
+        r##"<!DOCTYPE html>
 <html style="scroll-padding-top: 40px;">
 <head>
     <meta charset="UTF-8">
@@ -582,14 +729,14 @@ fn wrap_html(body: &str, title: &str, current_version: &str, current_route: &str
             --sidebar-width: 260px;
             --minimap-width: 240px;
         }}
-        body {{ 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; 
+        body {{
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
             margin: 0;
             display: flex;
             background: var(--bg-color);
             color: var(--text-color);
         }}
-        
+
         #sidebar {{
             width: var(--sidebar-width);
             height: 100vh;
@@ -621,8 +768,102 @@ fn wrap_html(body: &str, title: &str, current_version: &str, current_route: &str
             {}
             padding: 2rem 4rem 10rem 4rem;
             flex-grow: 1;
-            margin-top: 20px;
+            margin-top: 40px;
             max-width: 1000px;
+            position: relative;
+        }}
+
+        #search-bar-trigger {{
+            position: absolute;
+            top: -20px;
+            right: 4rem;
+            padding: 6px 12px;
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            color: #999;
+            font-size: 13px;
+            cursor: pointer;
+            width: 200px;
+            text-align: left;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }}
+
+        #search-modal {{
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 2000;
+            justify-content: center;
+            padding-top: 100px;
+        }}
+        #search-modal.visible {{ display: flex; }}
+
+        #search-container {{
+            background: #fff;
+            width: 600px;
+            max-height: 400px;
+            border-radius: 12px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }}
+        #search-input-wrapper {{
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+        }}
+        #search-input {{
+            width: 100%;
+            border: none;
+            font-size: 16px;
+            outline: none;
+            font-family: inherit;
+        }}
+        #search-results {{
+            overflow-y: auto;
+            padding: 10px 0;
+        }}
+        .search-result {{
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            text-decoration: none;
+            color: inherit;
+        }}
+        .search-result:hover, .search-result.selected {{
+            background: #f5f9ff;
+        }}
+        .result-line {{
+            font-size: 14px;
+            color: #555;
+            flex-grow: 1;
+            margin-right: 20px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }}
+        .result-title {{
+            font-size: 12px;
+            color: #999;
+            background: #f0f0f0;
+            padding: 2px 8px;
+            border-radius: 4px;
+            white-space: nowrap;
+        }}
+        .result-line mark {{
+            background: #ffeeba;
+            color: inherit;
+            padding: 0 2px;
+            border-radius: 2px;
         }}
 
         .sidebar-item, .toc-item {{
@@ -646,18 +887,18 @@ fn wrap_html(body: &str, title: &str, current_version: &str, current_route: &str
         .sidebar-group.expanded {{ display: block; }}
 
         h1, h2, h3, h4, h5, h6 {{ color: #222; margin-top: 1.5em; scroll-margin-top: 40px; }}
-        code {{ 
-            background: #f1f1f1; 
-            padding: 0.2em 0.4em; 
-            border-radius: 3px; 
+        code {{
+            background: #f1f1f1;
+            padding: 0.2em 0.4em;
+            border-radius: 3px;
             font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace;
             font-size: 85%;
         }}
-        pre {{ 
-            background: #0d1117; 
-            padding: 32px 16px 12px 16px; 
-            border-radius: 8px; 
-            overflow-x: auto; 
+        pre {{
+            background: #0d1117;
+            padding: 32px 16px 12px 16px;
+            border-radius: 8px;
+            overflow-x: auto;
             line-height: 1.45;
             border: 1px solid #30363d;
             position: relative;
@@ -706,7 +947,7 @@ fn wrap_html(body: &str, title: &str, current_version: &str, current_route: &str
         }}
         .admonition > *:first-child {{ margin-top: 0; }}
         .admonition > *:last-child {{ margin-bottom: 0; }}
-        
+
         #version-selector-container {{
             padding: 10px 20px;
             margin-bottom: 10px;
@@ -739,6 +980,7 @@ fn wrap_html(body: &str, title: &str, current_version: &str, current_route: &str
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
     <script>
         window.__verdocs_version = "{}";
+        window.__verdocs_current_version_name = "{}";
         setInterval(() => {{
             fetch('/__verdocs/status')
                 .then(r => r.text())
@@ -752,13 +994,113 @@ fn wrap_html(body: &str, title: &str, current_version: &str, current_route: &str
         function switchVersion(newVersion) {{
             const currentPath = window.location.pathname;
             const pathParts = currentPath.split('/');
-            const versionIndex = pathParts.findIndex(part => part === "{}");
+            const versionIndex = pathParts.findIndex(part => part === window.__verdocs_current_version_name);
             if (versionIndex !== -1) {{
                 pathParts[versionIndex] = newVersion;
                 window.location.pathname = pathParts.join('/');
             }} else {{
                 window.location.pathname = '/' + newVersion + '/home';
             }}
+        }}
+
+        let searchIndex = null;
+        let selectedIndex = -1;
+
+        async function initSearch() {{
+            if (searchIndex) return;
+            const response = await fetch(`/search-index/${{window.__verdocs_current_version_name.replace(/\./g, '-')}}.json`);
+            searchIndex = await response.json();
+        }}
+
+        function openSearch() {{
+            const modal = document.getElementById('search-modal');
+            modal.classList.add('visible');
+            document.getElementById('search-input').focus();
+            initSearch();
+        }}
+
+        function closeSearch() {{
+            const modal = document.getElementById('search-modal');
+            modal.classList.remove('visible');
+        }}
+
+        function performSearch(query) {{
+            const resultsContainer = document.getElementById('search-results');
+            resultsContainer.innerHTML = '';
+            selectedIndex = -1;
+
+            if (query.length < 3) return;
+
+            const results = [];
+            searchIndex.forEach(page => {{
+                const lines = page.content.split('\n');
+                lines.forEach(line => {{
+                    const index = line.toLowerCase().indexOf(query.toLowerCase());
+                    if (index !== -1) {{
+                        results.push({{
+                            title: page.title,
+                            route: page.route,
+                            line: line.trim(),
+                            highlightIndex: index,
+                            queryLength: query.length
+                        }});
+                    }}
+                }});
+            }});
+
+            const topResults = results.slice(0, 5);
+            topResults.forEach((res, i) => {{
+                const div = document.createElement('div');
+                div.className = 'search-result';
+
+                const before = res.line.substring(0, res.highlightIndex);
+                const match = res.line.substring(res.highlightIndex, res.highlightIndex + res.queryLength);
+                const after = res.line.substring(res.highlightIndex + res.queryLength);
+
+                div.innerHTML = `
+                    <div class="result-line">${{escapeHtml(before)}}<mark>${{escapeHtml(match)}}</mark>${{escapeHtml(after)}}</div>
+                    <div class="result-title">${{escapeHtml(res.title)}}</div>
+                `;
+                div.onclick = () => window.location.href = `/${{window.__verdocs_current_version_name}}/${{res.route}}`;
+                resultsContainer.appendChild(div);
+            }});
+        }}
+
+        function escapeHtml(text) {{
+            const div = document.createElement('div');
+            div.innerText = text;
+            return div.innerHTML;
+        }}
+
+        document.addEventListener('keydown', (e) => {{
+            if ((e.metaKey || e.ctrlKey) && e.key === 'k') {{
+                e.preventDefault();
+                openSearch();
+            }}
+            if (e.key === 'Escape') closeSearch();
+
+            const modal = document.getElementById('search-modal');
+            if (modal.classList.contains('visible')) {{
+                const results = document.querySelectorAll('.search-result');
+                if (e.key === 'ArrowDown') {{
+                    e.preventDefault();
+                    selectedIndex = Math.min(selectedIndex + 1, results.length - 1);
+                    updateSelection(results);
+                }} else if (e.key === 'ArrowUp') {{
+                    e.preventDefault();
+                    selectedIndex = Math.max(selectedIndex - 1, 0);
+                    updateSelection(results);
+                }} else if (e.key === 'Enter' && selectedIndex !== -1) {{
+                    results[selectedIndex].click();
+                }}
+            }}
+        }});
+
+        function updateSelection(results) {{
+            results.forEach((r, i) => {{
+                if (i === selectedIndex) r.classList.add('selected');
+                else r.classList.remove('selected');
+            }});
         }}
 
         document.addEventListener('DOMContentLoaded', () => {{
@@ -781,7 +1123,7 @@ fn wrap_html(body: &str, title: &str, current_version: &str, current_route: &str
                 button.innerText = 'Copy';
                 button.className = 'copy-button';
                 pre.appendChild(button);
-                
+
                 button.onclick = () => {{
                     const code = pre.querySelector('code').innerText;
                     navigator.clipboard.writeText(code).then(() => {{
@@ -796,6 +1138,14 @@ fn wrap_html(body: &str, title: &str, current_version: &str, current_route: &str
     </script>
 </head>
 <body>
+    <div id="search-modal" onclick="if(event.target === this) closeSearch()">
+        <div id="search-container">
+            <div id="search-input-wrapper">
+                <input type="text" id="search-input" placeholder="Search documentation..." oninput="performSearch(this.value)">
+            </div>
+            <div id="search-results"></div>
+        </div>
+    </div>
     <div id="sidebar">
         <div id="version-selector-container">
             <select onchange="switchVersion(this.value)">
@@ -805,14 +1155,32 @@ fn wrap_html(body: &str, title: &str, current_version: &str, current_route: &str
         {}
     </div>
     <div id="main-content">
+        <div id="search-bar-trigger" onclick="openSearch()">
+            <span>Search...</span>
+            <span style="font-size: 11px; color: #bbb;">⌘K</span>
+        </div>
         {}
     </div>
     {}
 </body>
-</html>"##, title, main_content_style, version_timestamp, current_version, version_options, sidebar_html, body, minimap_html)
+</html>"##,
+        title,
+        main_content_style,
+        version_timestamp,
+        current_version,
+        version_options,
+        sidebar_html,
+        body,
+        minimap_html
+    )
 }
 
-fn render_sidebar(items: &[SidebarItem], version: &str, current_route: &str, depth: usize) -> String {
+fn render_sidebar(
+    items: &[SidebarItem],
+    version: &str,
+    current_route: &str,
+    depth: usize,
+) -> String {
     let mut html = String::new();
     let indent = depth * 15 + 20;
     for item in items {
@@ -824,9 +1192,21 @@ fn render_sidebar(items: &[SidebarItem], version: &str, current_route: &str, dep
             version, item.route, active_class, indent, item.title
         ));
         if !item.children.is_empty() {
-            let expanded_class = if is_descendant || is_active { "expanded" } else { "" };
-            html.push_str(&format!(r#"<div class="sidebar-group {}">"#, expanded_class));
-            html.push_str(&render_sidebar(&item.children, version, current_route, depth + 1));
+            let expanded_class = if is_descendant || is_active {
+                "expanded"
+            } else {
+                ""
+            };
+            html.push_str(&format!(
+                r#"<div class="sidebar-group {}">"#,
+                expanded_class
+            ));
+            html.push_str(&render_sidebar(
+                &item.children,
+                version,
+                current_route,
+                depth + 1,
+            ));
             html.push_str("</div>");
         }
     }
