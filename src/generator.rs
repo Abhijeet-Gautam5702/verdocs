@@ -107,7 +107,31 @@ impl<'a> VerdocsParser<'a> {
 
     fn apply_modifiers(&self, events: Vec<Event<'a>>, current_version: &str, current_route: &str) -> Vec<Event<'a>> {
         let events = self.modifier_tags(events);
-        self.modifier_links(events, current_version, current_route)
+        let events = self.modifier_links(events, current_version, current_route);
+        self.modifier_images(events)
+    }
+
+    fn modifier_images(&self, events: Vec<Event<'a>>) -> Vec<Event<'a>> {
+        let mut new_events = Vec::new();
+        for event in events {
+            if let Event::Start(Tag::Image { link_type, dest_url, title, id }) = event {
+                let dest = dest_url.to_string();
+                let final_dest = if dest.starts_with("assets/") {
+                    format!("/{}", dest)
+                } else {
+                    dest
+                };
+                new_events.push(Event::Start(Tag::Image {
+                    link_type,
+                    dest_url: final_dest.into(),
+                    title,
+                    id,
+                }));
+            } else {
+                new_events.push(event);
+            }
+        }
+        new_events
     }
 
     fn modifier_links(&self, events: Vec<Event<'a>>, current_version: &str, current_route: &str) -> Vec<Event<'a>> {
@@ -118,7 +142,6 @@ impl<'a> VerdocsParser<'a> {
                 Event::Start(Tag::Link { link_type, dest_url, title, id }) => {
                     let dest = dest_url.to_string();
                     if dest.starts_with("http") {
-                        // External link
                         new_events.push(Event::Html(format!(
                             r#"<a href="{}" title="{}" target="_blank" rel="noopener noreferrer">"#,
                             dest, title
@@ -144,7 +167,7 @@ impl<'a> VerdocsParser<'a> {
                             if depth > 0 { i += 1; }
                         }
                     } else {
-                        // Internal link
+                        // Resolve internal relative links
                         let final_dest = resolve_internal_link(current_version, current_route, &dest);
                         new_events.push(Event::Start(Tag::Link {
                             link_type: *link_type,
@@ -284,12 +307,10 @@ fn resolve_internal_link(current_version: &str, current_route: &str, dest: &str)
     let mut path_to_resolve = dest.to_string();
 
     if path_to_resolve.starts_with("@/") {
-        // Global path within current version: @/path/to/file.md -> /v1/path/to/file
         path_to_resolve = path_to_resolve[2..].to_string();
     } else if path_to_resolve.starts_with('/') {
         path_to_resolve = path_to_resolve.trim_start_matches('/').to_string();
     } else {
-        // Resolve relative path
         let base_path = PathBuf::from(current_route);
         let mut final_path = base_path;
         for component in Path::new(&path_to_resolve).components() {
@@ -306,7 +327,6 @@ fn resolve_internal_link(current_version: &str, current_route: &str, dest: &str)
         path_to_resolve = final_path.to_str().unwrap_or(&path_to_resolve).to_string().replace("\\", "/");
     }
 
-    // Strip .md and handle index collapse
     if path_to_resolve.ends_with(".md") {
         path_to_resolve = path_to_resolve[..path_to_resolve.len() - 3].to_string();
     }
@@ -707,6 +727,13 @@ fn wrap_html(body: &str, title: &str, current_version: &str, current_route: &str
             color: #999;
             margin-bottom: 10px;
             font-weight: bold;
+        }}
+        img {{
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            margin: 1.5rem 0;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
         }}
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
