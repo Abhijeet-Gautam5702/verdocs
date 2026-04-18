@@ -95,7 +95,7 @@ impl<'a> VerdocsParser<'a> {
         events = new_events;
 
         // 2. Pass through modifiers
-        let events = self.apply_modifiers(events);
+        let events = self.apply_modifiers(events, current_version, current_route);
 
         // 3. Compile AST to HTML
         let mut html_body = String::new();
@@ -105,8 +105,62 @@ impl<'a> VerdocsParser<'a> {
         wrap_html(&html_body, &self.config.title, current_version, current_route, &self.all_versions, sidebar, &toc, version_timestamp)
     }
 
-    fn apply_modifiers(&self, events: Vec<Event<'a>>) -> Vec<Event<'a>> {
-        self.modifier_tags(events)
+    fn apply_modifiers(&self, events: Vec<Event<'a>>, current_version: &str, current_route: &str) -> Vec<Event<'a>> {
+        let events = self.modifier_tags(events);
+        self.modifier_links(events, current_version, current_route)
+    }
+
+    fn modifier_links(&self, events: Vec<Event<'a>>, current_version: &str, current_route: &str) -> Vec<Event<'a>> {
+        let mut new_events = Vec::new();
+        let mut i = 0;
+        while i < events.len() {
+            match &events[i] {
+                Event::Start(Tag::Link { link_type, dest_url, title, id }) => {
+                    let dest = dest_url.to_string();
+                    if dest.starts_with("http") {
+                        // External link
+                        new_events.push(Event::Html(format!(
+                            r#"<a href="{}" title="{}" target="_blank" rel="noopener noreferrer">"#,
+                            dest, title
+                        ).into()));
+                        
+                        i += 1;
+                        let mut depth = 1;
+                        while i < events.len() && depth > 0 {
+                            match &events[i] {
+                                Event::Start(Tag::Link { .. }) => depth += 1,
+                                Event::End(TagEnd::Link) => {
+                                    depth -= 1;
+                                    if depth == 0 {
+                                        new_events.push(Event::Html("</a>".into()));
+                                    }
+                                }
+                                _ => {
+                                    if depth > 0 {
+                                        new_events.push(events[i].clone());
+                                    }
+                                }
+                            }
+                            if depth > 0 { i += 1; }
+                        }
+                    } else {
+                        // Internal link
+                        let final_dest = resolve_internal_link(current_version, current_route, &dest);
+                        new_events.push(Event::Start(Tag::Link {
+                            link_type: *link_type,
+                            dest_url: final_dest.into(),
+                            title: title.clone(),
+                            id: id.clone(),
+                        }));
+                    }
+                }
+                _ => {
+                    new_events.push(events[i].clone());
+                }
+            }
+            i += 1;
+        }
+        new_events
     }
 
     fn modifier_tags(&self, events: Vec<Event<'a>>) -> Vec<Event<'a>> {
@@ -224,6 +278,49 @@ impl<'a> VerdocsParser<'a> {
             color, bg_color, title_html
         )
     }
+}
+
+fn resolve_internal_link(current_version: &str, current_route: &str, dest: &str) -> String {
+    let mut path_to_resolve = dest.to_string();
+
+    if path_to_resolve.starts_with("@/") {
+        // Global path within current version: @/path/to/file.md -> /v1/path/to/file
+        path_to_resolve = path_to_resolve[2..].to_string();
+    } else if path_to_resolve.starts_with('/') {
+        path_to_resolve = path_to_resolve.trim_start_matches('/').to_string();
+    } else {
+        // Resolve relative path
+        let base_path = PathBuf::from(current_route);
+        let mut final_path = base_path;
+        for component in Path::new(&path_to_resolve).components() {
+            match component {
+                std::path::Component::ParentDir => {
+                    final_path.pop();
+                }
+                std::path::Component::Normal(c) => {
+                    final_path.push(c);
+                }
+                _ => {}
+            }
+        }
+        path_to_resolve = final_path.to_str().unwrap_or(&path_to_resolve).to_string().replace("\\", "/");
+    }
+
+    // Strip .md and handle index collapse
+    if path_to_resolve.ends_with(".md") {
+        path_to_resolve = path_to_resolve[..path_to_resolve.len() - 3].to_string();
+    }
+
+    let parts: Vec<&str> = path_to_resolve.split('/').collect();
+    if parts.len() >= 2 {
+        let last = parts[parts.len() - 1];
+        let second_last = parts[parts.len() - 2];
+        if last == second_last {
+            path_to_resolve = parts[..parts.len() - 1].join("/");
+        }
+    }
+
+    format!("/{}/{}", current_version, path_to_resolve.trim_start_matches('/'))
 }
 
 fn slugify(text: &str) -> String {
