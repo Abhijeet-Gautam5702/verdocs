@@ -15,6 +15,20 @@ pub struct SearchIndexEntry {
     pub content: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SidebarItem {
+    pub title: String,
+    pub route: String,
+    pub children: Vec<SidebarItem>,
+}
+
+#[derive(Debug, Clone)]
+pub struct TocItem {
+    pub title: String,
+    pub id: String,
+    pub level: u32,
+}
+
 pub struct VerdocsParser<'a> {
     config: &'a Config,
     all_versions: Vec<String>,
@@ -25,21 +39,70 @@ impl<'a> VerdocsParser<'a> {
         Self { config, all_versions }
     }
 
-    pub fn parse(&self, markdown: &str, current_version: &str, version_timestamp: u64) -> String {
+    pub fn parse(&self, markdown: &str, current_version: &str, current_route: &str, sidebar: &[SidebarItem], version_timestamp: u64) -> String {
         let mut options = Options::empty();
         options.insert(Options::ENABLE_STRIKETHROUGH);
         options.insert(Options::ENABLE_TABLES);
         options.insert(Options::ENABLE_TASKLISTS);
         
         let parser = MarkdownParser::new_ext(markdown, options);
-        let events: Vec<Event> = parser.collect();
+        let mut events: Vec<Event> = parser.collect();
 
+        // 1. Extract TOC and inject IDs into headings
+        let mut toc = Vec::new();
+        let mut new_events = Vec::new();
+        let mut i = 0;
+        while i < events.len() {
+            let event = &events[i];
+            if let Event::Start(Tag::Heading { level, .. }) = event {
+                let level_num = *level as u32;
+                if level_num >= 2 {
+                    let mut heading_text = String::new();
+                    let mut j = i + 1;
+                    while j < events.len() {
+                        match &events[j] {
+                            Event::Text(t) | Event::Code(t) => heading_text.push_str(t),
+                            Event::End(TagEnd::Heading(_)) => break,
+                            _ => {}
+                        }
+                        j += 1;
+                    }
+                    
+                    let id = slugify(&heading_text);
+                    toc.push(TocItem {
+                        title: heading_text.clone(),
+                        id: id.clone(),
+                        level: level_num,
+                    });
+
+                    new_events.push(Event::Html(format!("<h{} id=\"{}\">", level_num, id).into()));
+                    i += 1;
+                    while i < events.len() {
+                        if let Event::End(TagEnd::Heading(_)) = &events[i] {
+                            new_events.push(Event::Html(format!("</h{}>", level_num).into()));
+                            break;
+                        }
+                        new_events.push(events[i].clone());
+                        i += 1;
+                    }
+                    i += 1;
+                    continue;
+                }
+            }
+            new_events.push(event.clone());
+            i += 1;
+        }
+        events = new_events;
+
+        // 2. Pass through modifiers
         let events = self.apply_modifiers(events);
 
+        // 3. Compile AST to HTML
         let mut html_body = String::new();
         html::push_html(&mut html_body, events.into_iter());
 
-        wrap_html(&html_body, &self.config.title, current_version, &self.all_versions, version_timestamp)
+        // 4. Wrap in full HTML template
+        wrap_html(&html_body, &self.config.title, current_version, current_route, &self.all_versions, sidebar, &toc, version_timestamp)
     }
 
     fn apply_modifiers(&self, events: Vec<Event<'a>>) -> Vec<Event<'a>> {
@@ -52,13 +115,22 @@ impl<'a> VerdocsParser<'a> {
         let re_end = Regex::new(r#"\{/[A-Z]+\}"#).unwrap();
 
         let mut tag_stack = Vec::new();
+        let mut in_code_block = false;
 
         let mut i = 0;
         while i < events.len() {
             let event = &events[i];
 
             match event {
-                Event::Start(Tag::Paragraph) => {
+                Event::Start(Tag::CodeBlock(_)) => {
+                    in_code_block = true;
+                    new_events.push(event.clone());
+                }
+                Event::End(TagEnd::CodeBlock) => {
+                    in_code_block = false;
+                    new_events.push(event.clone());
+                }
+                Event::Start(Tag::Paragraph) if !in_code_block => {
                     if let Some(Event::Text(text)) = events.get(i + 1) {
                         if let Some(Event::End(TagEnd::Paragraph)) = events.get(i + 2) {
                             let trimmed = text.trim();
@@ -88,7 +160,7 @@ impl<'a> VerdocsParser<'a> {
                     }
                     new_events.push(event.clone());
                 }
-                Event::Text(text) => {
+                Event::Text(text) if !in_code_block => {
                     let mut final_content = text.to_string();
                     let mut has_tags = false;
 
@@ -154,6 +226,14 @@ impl<'a> VerdocsParser<'a> {
     }
 }
 
+fn slugify(text: &str) -> String {
+    text.to_lowercase()
+        .replace(|c: char| !c.is_alphanumeric() && c != '-', " ")
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join("-")
+}
+
 pub fn generate_site(src_path: &PathBuf, version_timestamp: u64) -> Result<()> {
     let config_path = src_path.join("config.yml");
     let config_content = fs::read_to_string(&config_path)
@@ -212,20 +292,16 @@ fn process_version(version_src: &Path, version_out: &Path, version_name: &str, p
         let path = entry.path();
         
         if path.is_dir() {
-            if path == version_src {
-                continue;
-            }
-
+            if path == version_src { continue; }
             let dir_name = path.file_name().unwrap().to_str().unwrap();
             let index_md = path.join(format!("{}.md", dir_name));
             if !index_md.exists() {
-                return Err(anyhow!(
-                    "Missing required index file: {:?}. Every folder must contain a markdown file with the same name as the folder.",
-                    index_md
-                ));
+                return Err(anyhow!("Missing index file: {:?}", index_md));
             }
         }
     }
+
+    let sidebar = build_sidebar(version_src, version_src)?;
 
     for entry in WalkDir::new(version_src) {
         let entry = entry?;
@@ -233,8 +309,6 @@ fn process_version(version_src: &Path, version_out: &Path, version_name: &str, p
 
         if path.extension().map_or(false, |ext| ext == "md") {
             let content = fs::read_to_string(path)?;
-            let full_html = parser.parse(&content, version_name, version_timestamp);
-
             let relative_path = path.strip_prefix(version_src)?;
             let file_stem = path.file_stem().unwrap().to_str().unwrap();
             
@@ -245,9 +319,7 @@ fn process_version(version_src: &Path, version_out: &Path, version_name: &str, p
                     let stem = &name[..name.len()-3];
                     if let Some(parent) = relative_path.parent() {
                         if let Some(parent_name) = parent.file_name().and_then(|n| n.to_str()) {
-                            if stem == parent_name {
-                                continue;
-                            }
+                            if stem == parent_name { continue; }
                         }
                     }
                     route_parts.push(stem);
@@ -257,6 +329,7 @@ fn process_version(version_src: &Path, version_out: &Path, version_name: &str, p
             }
             
             let route = route_parts.join("/");
+            let full_html = parser.parse(&content, version_name, &route, &sidebar, version_timestamp);
             
             let mut html_path = version_out.join(&route);
             if !route.is_empty() {
@@ -288,56 +361,258 @@ fn process_version(version_src: &Path, version_out: &Path, version_name: &str, p
     Ok(())
 }
 
+fn build_sidebar(current_dir: &Path, root_dir: &Path) -> Result<Vec<SidebarItem>> {
+    let mut items = Vec::new();
+    let entries = fs::read_dir(current_dir)?;
+    let mut paths: Vec<_> = entries.map(|e| e.unwrap().path()).collect();
+    
+    paths.sort_by(|a, b| {
+        let a_name = a.file_name().unwrap().to_str().unwrap().to_lowercase();
+        let b_name = b.file_name().unwrap().to_str().unwrap().to_lowercase();
+        if a_name == "home" { return std::cmp::Ordering::Less; }
+        if b_name == "home" { return std::cmp::Ordering::Greater; }
+        a_name.cmp(&b_name)
+    });
+
+    for path in paths {
+        if path.is_dir() {
+            let dir_name = path.file_name().unwrap().to_str().unwrap();
+            let relative_path = path.strip_prefix(root_dir)?;
+            let route = relative_path.to_str().unwrap().replace("\\", "/");
+            items.push(SidebarItem {
+                title: to_title_case(dir_name),
+                route,
+                children: build_sidebar(&path, root_dir)?,
+            });
+        } else if path.extension().map_or(false, |ext| ext == "md") {
+            let stem = path.file_stem().unwrap().to_str().unwrap();
+            let parent_name = current_dir.file_name().and_then(|n| n.to_str()).unwrap_or("");
+            if stem == parent_name { continue; }
+            let relative_path = path.strip_prefix(root_dir)?;
+            let route = relative_path.with_extension("").to_str().unwrap().replace("\\", "/");
+            items.push(SidebarItem {
+                title: to_title_case(stem),
+                route,
+                children: Vec::new(),
+            });
+        }
+    }
+    Ok(items)
+}
+
+fn to_title_case(s: &str) -> String {
+    s.split('-').map(|word| {
+        let mut c = word.chars();
+        match c.next() {
+            None => String::new(),
+            Some(f) => f.to_uppercase().collect::<String>() + c.as_str(),
+        }
+    }).collect::<Vec<_>>().join(" ")
+}
+
 fn hex_to_rgba(hex: &str, opacity: f32) -> String {
     let hex = hex.trim_start_matches('#');
-    if hex.len() != 6 {
-        return format!("rgba(0,0,0,{})", opacity);
-    }
-    
+    if hex.len() != 6 { return format!("rgba(0,0,0,{})", opacity); }
     let r = u8::from_str_radix(&hex[0..2], 16).unwrap_or(0);
     let g = u8::from_str_radix(&hex[2..4], 16).unwrap_or(0);
     let b = u8::from_str_radix(&hex[4..6], 16).unwrap_or(0);
-    
     format!("rgba({}, {}, {}, {})", r, g, b, opacity)
 }
 
-fn wrap_html(body: &str, title: &str, current_version: &str, all_versions: &[String], version_timestamp: u64) -> String {
+fn wrap_html(body: &str, title: &str, current_version: &str, current_route: &str, all_versions: &[String], sidebar: &[SidebarItem], toc: &[TocItem], version_timestamp: u64) -> String {
     let version_options: String = all_versions.iter().map(|v| {
         format!(r#"<option value="{}" {}>{}</option>"#, v, if v == current_version { "selected" } else { "" }, v)
     }).collect::<Vec<_>>().join("\n");
 
-    format!(r#"<!DOCTYPE html>
-<html>
+    let sidebar_html = render_sidebar(sidebar, current_version, current_route, 0);
+    
+    let has_toc = !toc.is_empty();
+    let toc_html: String = if has_toc {
+        toc.iter().map(|item| {
+            let indent = (item.level - 2) * 15;
+            format!(r##"<a href="#{}" class="toc-item" style="padding-left: {}px;">{}</a>"##, item.id, indent, item.title)
+        }).collect::<Vec<_>>().join("\n")
+    } else {
+        String::new()
+    };
+
+    let main_content_style = if has_toc {
+        "margin-right: var(--minimap-width);"
+    } else {
+        "margin-right: 0;"
+    };
+
+    let minimap_html = if has_toc {
+        format!(r##"<div id="minimap">
+        <div class="toc-title">On this page</div>
+        {}
+    </div>"##, toc_html)
+    } else {
+        String::new()
+    };
+
+    format!(r##"<!DOCTYPE html>
+<html style="scroll-padding-top: 40px;">
 <head>
     <meta charset="UTF-8">
     <title>{}</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
     <style>
-        body {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; padding: 2rem; max-width: 800px; margin: 40px auto 0 auto; line-height: 1.6; color: #333; }}
-        h1, h2, h3, h4, h5, h6 {{ color: #222; margin-top: 1.5em; }}
-        code {{ background: #f4f4f4; padding: 0.2em 0.4em; border-radius: 3px; font-family: monospace; }}
-        pre {{ background: #f4f4f4; padding: 1em; border-radius: 5px; overflow-x: auto; }}
+        :root {{
+            --primary-color: #007bff;
+            --bg-color: #ffffff;
+            --text-color: #333333;
+            --sidebar-width: 260px;
+            --minimap-width: 240px;
+        }}
+        body {{ 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; 
+            margin: 0;
+            display: flex;
+            background: var(--bg-color);
+            color: var(--text-color);
+        }}
+        
+        #sidebar {{
+            width: var(--sidebar-width);
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            border-right: 1px solid #eee;
+            background: #fcfcfc;
+            overflow-y: auto;
+            padding: 20px 0;
+            box-sizing: border-box;
+        }}
+
+        #minimap {{
+            width: var(--minimap-width);
+            height: 100vh;
+            position: fixed;
+            right: 0;
+            top: 0;
+            border-left: 1px solid #eee;
+            background: #fcfcfc;
+            overflow-y: auto;
+            padding: 60px 20px 20px 20px;
+            box-sizing: border-box;
+        }}
+
+        #main-content {{
+            margin-left: var(--sidebar-width);
+            {}
+            padding: 2rem 4rem 10rem 4rem;
+            flex-grow: 1;
+            margin-top: 20px;
+            max-width: 1000px;
+        }}
+
+        .sidebar-item, .toc-item {{
+            display: block;
+            padding: 8px 20px;
+            text-decoration: none;
+            color: #555;
+            font-size: 14px;
+            transition: all 0.2s;
+        }}
+        .toc-item {{ padding: 4px 0; font-size: 13px; color: #777; }}
+        .sidebar-item:hover, .toc-item:hover {{ color: var(--primary-color); }}
+        .sidebar-item.active {{
+            background: #eef6ff;
+            color: var(--primary-color);
+            font-weight: bold;
+            border-right: 3px solid var(--primary-color);
+        }}
+
+        .sidebar-group {{ display: none; }}
+        .sidebar-group.expanded {{ display: block; }}
+
+        h1, h2, h3, h4, h5, h6 {{ color: #222; margin-top: 1.5em; scroll-margin-top: 40px; }}
+        code {{ 
+            background: #f1f1f1; 
+            padding: 0.2em 0.4em; 
+            border-radius: 3px; 
+            font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace;
+            font-size: 85%;
+        }}
+        pre {{ 
+            background: #0d1117; 
+            padding: 32px 16px 12px 16px; 
+            border-radius: 8px; 
+            overflow-x: auto; 
+            line-height: 1.45;
+            border: 1px solid #30363d;
+            position: relative;
+            margin: 1.5rem 0;
+        }}
+        pre::before {{
+            content: attr(data-lang);
+            position: absolute;
+            top: 10px;
+            left: 16px;
+            font-size: 11px;
+            font-weight: bold;
+            color: #8b949e;
+            text-transform: uppercase;
+            font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace;
+        }}
+        pre code {{
+            background: transparent !important;
+            padding: 0 !important;
+            color: #e6edf3;
+            font-size: 13px;
+            display: block;
+        }}
+        .copy-button {{
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            padding: 4px 8px;
+            background: rgba(255,255,255,0.05);
+            color: #8b949e;
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: bold;
+            transition: all 0.2s;
+            opacity: 0;
+        }}
+        pre:hover .copy-button {{
+            opacity: 1;
+        }}
+        .copy-button:hover {{
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+            border-color: rgba(255,255,255,0.2);
+        }}
         .admonition > *:first-child {{ margin-top: 0; }}
         .admonition > *:last-child {{ margin-bottom: 0; }}
         
-        #version-selector {{
-            position: fixed;
-            top: 10px;
-            left: 10px;
-            background: #fff;
-            padding: 5px 10px;
+        #version-selector-container {{
+            padding: 10px 20px;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }}
+        #version-selector-container select {{
+            width: 100%;
+            padding: 5px;
             border: 1px solid #ddd;
             border-radius: 4px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            z-index: 1000;
-        }}
-        #version-selector select {{
-            border: none;
-            font-family: inherit;
-            font-size: 14px;
-            cursor: pointer;
+            background: #fff;
             outline: none;
         }}
+        .toc-title {{
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #999;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }}
     </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
     <script>
         window.__verdocs_version = "{}";
         setInterval(() => {{
@@ -361,15 +636,75 @@ fn wrap_html(body: &str, title: &str, current_version: &str, all_versions: &[Str
                 window.location.pathname = '/' + newVersion + '/home';
             }}
         }}
+
+        document.addEventListener('DOMContentLoaded', () => {{
+            // 1. Extract and set language labels
+            document.querySelectorAll('pre code').forEach(code => {{
+                const pre = code.parentElement;
+                const langClass = Array.from(code.classList).find(c => c.startsWith('language-'));
+                if (langClass) {{
+                    const lang = langClass.replace('language-', '');
+                    pre.setAttribute('data-lang', lang);
+                }}
+            }});
+
+            // 2. Highlight Code
+            hljs.highlightAll();
+
+            // 3. Add Copy Buttons
+            document.querySelectorAll('pre').forEach(pre => {{
+                const button = document.createElement('button');
+                button.innerText = 'Copy';
+                button.className = 'copy-button';
+                pre.appendChild(button);
+                
+                button.onclick = () => {{
+                    const code = pre.querySelector('code').innerText;
+                    navigator.clipboard.writeText(code).then(() => {{
+                        button.innerText = 'Copied!';
+                        setTimeout(() => {{
+                            button.innerText = 'Copy';
+                        }}, 2000);
+                    }});
+                }};
+            }});
+        }});
     </script>
 </head>
 <body>
-    <div id="version-selector">
-        <select onchange="switchVersion(this.value)">
-            {}
-        </select>
+    <div id="sidebar">
+        <div id="version-selector-container">
+            <select onchange="switchVersion(this.value)">
+                {}
+            </select>
+        </div>
+        {}
+    </div>
+    <div id="main-content">
+        {}
     </div>
     {}
 </body>
-</html>"#, title, version_timestamp, current_version, version_options, body)
+</html>"##, title, main_content_style, version_timestamp, current_version, version_options, sidebar_html, body, minimap_html)
+}
+
+fn render_sidebar(items: &[SidebarItem], version: &str, current_route: &str, depth: usize) -> String {
+    let mut html = String::new();
+    let indent = depth * 15 + 20;
+    for item in items {
+        let is_active = item.route == current_route;
+        let is_descendant = current_route.starts_with(&item.route) && !item.route.is_empty();
+        let active_class = if is_active { "active" } else { "" };
+        html.push_str(&format!(
+            r#"<a href="/{}/{}" class="sidebar-item {}" style="padding-left: {}px;">{}</a>"#,
+            version, item.route, active_class, indent, item.title
+        ));
+        if !item.children.is_empty() {
+            let expanded_class = if is_descendant || is_active { "expanded" } else { "" };
+            html.push_str(&format!(r#"<div class="sidebar-group {}">"#, expanded_class));
+            html.push_str(&render_sidebar(&item.children, version, current_route, depth + 1));
+            html.push_str("</div>");
+        }
+    }
+    html
 }

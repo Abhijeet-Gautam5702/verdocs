@@ -41,6 +41,28 @@ fn create_version_folder(root: &PathBuf, version: &str, is_updated: bool) -> Res
         let mut content = format!("# {}\n\nThis is the {} page for version {}.\n", 
             folder_name.to_uppercase(), folder_name, version);
             
+        if folder == "quick-start" {
+            content.push_str(r#"
+## Introduction
+This is an introduction to the quick start guide.
+
+## Installation
+How to install the project.
+
+### Step 1: Download
+Download the binary from the releases page.
+
+### Step 2: Extract
+Extract the archive to your desired location.
+
+## Configuration
+Basic configuration steps.
+
+## Next Steps
+Where to go from here.
+"#);
+        }
+
         if folder == "home" && is_updated {
             content.push_str("\n{TIP type=\"admonition\" title=\"New in this version\"}\nWe have added a new Features section!\n{/TIP}\n");
         }
