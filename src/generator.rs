@@ -887,6 +887,16 @@ fn wrap_html(
         .sidebar-group.expanded {{ display: block; }}
 
         h1, h2, h3, h4, h5, h6 {{ color: #222; margin-top: 1.5em; scroll-margin-top: 40px; }}
+        p {{ line-height: 1.6; }}
+        li {{ margin-bottom: 8px; }}
+        #main-content a {{
+            color: inherit;
+            text-decoration: none;
+            cursor: pointer;
+        }}
+        #main-content a:hover {{
+            text-decoration: underline;
+        }}
         code {{
             background: #f1f1f1;
             padding: 0.2em 0.4em;

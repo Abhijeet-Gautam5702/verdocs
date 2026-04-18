@@ -32,6 +32,7 @@ out
 search-index
 assets
 test-docs
+config.yml
 v*/
 
 todo.md
