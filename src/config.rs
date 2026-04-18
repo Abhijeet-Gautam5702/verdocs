@@ -8,6 +8,7 @@ pub struct Config {
     pub navbar_logo: Option<String>,
     pub favicon: Option<String>,
     pub theme: ThemeConfig,
+    pub dark_theme: ThemeConfig,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

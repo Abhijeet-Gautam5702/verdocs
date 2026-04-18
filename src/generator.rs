@@ -272,11 +272,11 @@ impl<'a> VerdocsParser<'a> {
                                     let tag_type = caps.get(2).map(|m| m.as_str());
                                     let title = caps.get(3).map(|m| m.as_str());
 
-                                    if let Some(color) = self.config.theme.colors.get(&tag_name) {
+                                    if let Some(_color) = self.config.theme.colors.get(&tag_name) {
                                         if tag_type == Some("admonition") {
                                             new_events.push(Event::Html(
                                                 self.render_admonition_start(
-                                                    &tag_name, title, color,
+                                                    &tag_name, title,
                                                 )
                                                 .into(),
                                             ));
@@ -310,14 +310,14 @@ impl<'a> VerdocsParser<'a> {
                         let tag_type = caps.get(2).map(|m| m.as_str());
                         let title = caps.get(3).map(|m| m.as_str());
 
-                        if let Some(color) = self.config.theme.colors.get(&tag_name) {
+                        if let Some(_color) = self.config.theme.colors.get(&tag_name) {
                             let (html, close_type) = if tag_type == Some("admonition") {
-                                (self.render_admonition_start(&tag_name, title, color), "div")
+                                (self.render_admonition_start(&tag_name, title), "div")
                             } else {
                                 (
                                     format!(
-                                        r#"<span style="color: {}; font-weight: bold;">"#,
-                                        color
+                                        r#"<span style="color: var(--color-{}); font-weight: bold;">"#,
+                                        tag_name
                                     ),
                                     "span",
                                 )
@@ -357,20 +357,19 @@ impl<'a> VerdocsParser<'a> {
         new_events
     }
 
-    fn render_admonition_start(&self, _tag_name: &str, title: Option<&str>, color: &str) -> String {
-        let bg_color = hex_to_rgba(color, 0.1);
+    fn render_admonition_start(&self, tag_name: &str, title: Option<&str>) -> String {
         let title_html = if let Some(t) = title {
             format!(
-                r#"<div style="font-weight: bold; color: {}; margin-bottom: 5px;">{}</div>"#,
-                color, t
+                r#"<div style="font-weight: bold; color: var(--color-{}); margin-bottom: 5px;">{}</div>"#,
+                tag_name, t
             )
         } else {
             "".to_string()
         };
 
         format!(
-            r#"<div class="admonition" style="padding: 10px 15px; margin-bottom: 15px; border-left: 5px solid {}; background-color: {}; border-radius: 6px; color: inherit;">{}"#,
-            color, bg_color, title_html
+            r#"<div class="admonition" style="padding: 10px 15px; margin-bottom: 15px; border-left: 5px solid var(--color-{}); background-color: var(--bg-color-{}); border-radius: 6px; color: inherit;">{}"#,
+            tag_name, tag_name, title_html
         )
     }
 }
@@ -737,6 +736,24 @@ fn wrap_html(
         String::new()
     };
 
+    let mut light_vars = format!(
+        "--primary-color: {}; --bg-color: {}; --text-color: {}; --navbar-bg: #ffffff; --sidebar-bg: #fcfcfc; --border-color: #eeeeee; --code-bg: #f1f1f1; --search-bg: #f3f4f6; --search-border: #e5e7eb; --search-text: #6b7280; --h-color: #222; --sidebar-item-color: #555; --toc-item-color: #777; --modal-bg: #ffffff;",
+        config.theme.primary_color, config.theme.background_color, config.theme.text_color
+    );
+    for (name, color) in &config.theme.colors {
+        light_vars.push_str(&format!("--color-{}: {};", name, color));
+        light_vars.push_str(&format!("--bg-color-{}: {};", name, hex_to_rgba(color, 0.1)));
+    }
+
+    let mut dark_vars = format!(
+        "--primary-color: {}; --bg-color: {}; --text-color: {}; --navbar-bg: #161b22; --sidebar-bg: #0d1117; --border-color: #30363d; --code-bg: #21262d; --search-bg: #21262d; --search-border: #30363d; --search-text: #8b949e; --h-color: #e6edf3; --sidebar-item-color: #8b949e; --toc-item-color: #7d8590; --modal-bg: #161b22;",
+        config.dark_theme.primary_color, config.dark_theme.background_color, config.dark_theme.text_color
+    );
+    for (name, color) in &config.dark_theme.colors {
+        dark_vars.push_str(&format!("--color-{}: {};", name, color));
+        dark_vars.push_str(&format!("--bg-color-{}: {};", name, hex_to_rgba(color, 0.1)));
+    }
+
     let navbar_logo_html = if logo_exists {
         if let Some(ref logo) = config.navbar_logo {
             format!(
@@ -763,6 +780,16 @@ fn wrap_html(
         String::new()
     };
 
+    let theme_toggle_html = r#"
+        <div id="theme-toggle-container">
+            <select id="theme-toggle" onchange="setTheme(this.value)">
+                <option value="system">System</option>
+                <option value="light">Light</option>
+                <option value="dark">Dark</option>
+            </select>
+        </div>
+    "#;
+
     format!(
         r##"<!DOCTYPE html>
 <html style="scroll-padding-top: 80px;">
@@ -773,13 +800,19 @@ fn wrap_html(
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
     <style>
         :root {{
-            --primary-color: #007bff;
-            --bg-color: #ffffff;
-            --text-color: #333333;
+            {}
             --sidebar-width: 260px;
             --minimap-width: 240px;
             --navbar-height: 60px;
         }}
+
+        @media (prefers-color-scheme: dark) {{
+            :root {{ {} }}
+        }}
+
+        [data-theme='light'] {{ {} }}
+        [data-theme='dark'] {{ {} }}
+
         body {{
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
             margin: 0;
@@ -796,8 +829,8 @@ fn wrap_html(
             left: 0;
             right: 0;
             height: var(--navbar-height);
-            background: #fff;
-            border-bottom: 1px solid #eee;
+            background: var(--navbar-bg);
+            border-bottom: 1px solid var(--border-color);
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -811,8 +844,8 @@ fn wrap_html(
             position: fixed;
             left: 0;
             top: var(--navbar-height);
-            border-right: 1px solid #eee;
-            background: #fcfcfc;
+            border-right: 1px solid var(--border-color);
+            background: var(--sidebar-bg);
             overflow-y: auto;
             padding: 20px 0;
             box-sizing: border-box;
@@ -824,8 +857,8 @@ fn wrap_html(
             position: fixed;
             right: 0;
             top: var(--navbar-height);
-            border-left: 1px solid #eee;
-            background: #fcfcfc;
+            border-left: 1px solid var(--border-color);
+            background: var(--sidebar-bg);
             overflow-y: auto;
             padding: 60px 20px 20px 20px;
             box-sizing: border-box;
@@ -846,10 +879,10 @@ fn wrap_html(
 
         #search-bar-trigger {{
             padding: 6px 12px;
-            background: #f3f4f6;
-            border: 1px solid #e5e7eb;
+            background: var(--search-bg);
+            border: 1px solid var(--search-border);
             border-radius: 6px;
-            color: #6b7280;
+            color: var(--search-text);
             font-size: 13px;
             cursor: pointer;
             width: 200px;
@@ -860,8 +893,7 @@ fn wrap_html(
             transition: all 0.2s;
         }}
         #search-bar-trigger:hover {{
-            background: #e5e7eb;
-            border-color: #d1d5db;
+            opacity: 0.8;
         }}
 
         #search-modal {{
@@ -879,7 +911,7 @@ fn wrap_html(
         #search-modal.visible {{ display: flex; }}
 
         #search-container {{
-            background: #fff;
+            background: var(--modal-bg);
             width: 600px;
             max-height: 400px;
             border-radius: 12px;
@@ -887,14 +919,17 @@ fn wrap_html(
             display: flex;
             flex-direction: column;
             overflow: hidden;
+            border: 1px solid var(--border-color);
         }}
         #search-input-wrapper {{
             padding: 15px;
-            border-bottom: 1px solid #eee;
+            border-bottom: 1px solid var(--border-color);
         }}
         #search-input {{
             width: 100%;
             border: none;
+            background: transparent;
+            color: var(--text-color);
             font-size: 16px;
             outline: none;
             font-family: inherit;
@@ -913,11 +948,11 @@ fn wrap_html(
             color: inherit;
         }}
         .search-result:hover, .search-result.selected {{
-            background: #f5f9ff;
+            background: var(--search-bg);
         }}
         .result-line {{
             font-size: 14px;
-            color: #555;
+            color: var(--text-color);
             flex-grow: 1;
             margin-right: 20px;
             white-space: nowrap;
@@ -926,15 +961,15 @@ fn wrap_html(
         }}
         .result-title {{
             font-size: 12px;
-            color: #999;
-            background: #f0f0f0;
+            color: var(--search-text);
+            background: var(--search-bg);
             padding: 2px 8px;
             border-radius: 4px;
             white-space: nowrap;
         }}
         .result-line mark {{
-            background: #ffeeba;
-            color: inherit;
+            background: var(--primary-color);
+            color: #fff;
             padding: 0 2px;
             border-radius: 2px;
         }}
@@ -943,14 +978,14 @@ fn wrap_html(
             display: block;
             padding: 8px 20px;
             text-decoration: none;
-            color: #555;
+            color: var(--sidebar-item-color);
             font-size: 14px;
             transition: all 0.2s;
         }}
-        .toc-item {{ padding: 4px 0; font-size: 13px; color: #777; }}
+        .toc-item {{ padding: 4px 0; font-size: 13px; color: var(--toc-item-color); }}
         .sidebar-item:hover, .toc-item:hover {{ color: var(--primary-color); }}
         .sidebar-item.active {{
-            background: #eef6ff;
+            background: var(--search-bg);
             color: var(--primary-color);
             font-weight: bold;
             border-right: 3px solid var(--primary-color);
@@ -959,7 +994,7 @@ fn wrap_html(
         .sidebar-group {{ display: none; }}
         .sidebar-group.expanded {{ display: block; }}
 
-        h1, h2, h3, h4, h5, h6 {{ color: #222; margin-top: 1.5em; scroll-margin-top: 40px; }}
+        h1, h2, h3, h4, h5, h6 {{ color: var(--h-color); margin-top: 1.5em; scroll-margin-top: 40px; }}
         p {{ line-height: 1.6; }}
         li {{ margin-bottom: 8px; }}
         #main-content a {{
@@ -971,7 +1006,7 @@ fn wrap_html(
             text-decoration: none;
         }}
         code {{
-            background: #f1f1f1;
+            background: var(--code-bg);
             padding: 0.2em 0.4em;
             border-radius: 3px;
             font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace;
@@ -1034,15 +1069,15 @@ fn wrap_html(
         #version-selector-container {{
             padding: 10px 20px;
             margin-bottom: 10px;
-            border-bottom: 1px solid #eee;
+            border-bottom: 1px solid var(--border-color);
         }}
         #version-selector-container select {{
             width: 100%;
             padding: 8px 12px;
-            border: 1px solid #e5e7eb;
+            border: 1px solid var(--search-border);
             border-radius: 6px;
-            background: #f9fafb;
-            color: #374151;
+            background: var(--search-bg);
+            color: var(--text-color);
             outline: none;
             font-size: 13px;
             cursor: pointer;
@@ -1054,14 +1089,13 @@ fn wrap_html(
             background-size: 14px;
         }}
         #version-selector-container select:hover {{
-            background-color: #f3f4f6;
-            border-color: #d1d5db;
+            opacity: 0.8;
         }}
         .toc-title {{
             font-size: 11px;
             text-transform: uppercase;
             letter-spacing: 1px;
-            color: #999;
+            color: var(--search-text);
             margin-bottom: 10px;
             font-weight: bold;
         }}
@@ -1072,11 +1106,39 @@ fn wrap_html(
             margin: 1.5rem 0;
             box-shadow: 0 4px 12px rgba(0,0,0,0.05);
         }}
+
+        #theme-toggle-container {{
+            margin-left: 15px;
+            display: flex;
+            align-items: center;
+        }}
+        #theme-toggle-container select {{
+            padding: 4px 8px;
+            border: 1px solid var(--search-border);
+            border-radius: 6px;
+            background: var(--search-bg);
+            color: var(--text-color);
+            font-size: 12px;
+            cursor: pointer;
+            outline: none;
+        }}
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
     <script>
         window.__verdocs_version = "{}";
         window.__verdocs_current_version_name = "{}";
+
+        function setTheme(theme) {{
+            if (theme === 'system') {{
+                document.documentElement.removeAttribute('data-theme');
+            }} else {{
+                document.documentElement.setAttribute('data-theme', theme);
+            }}
+            localStorage.setItem('verdocs-theme', theme);
+        }}
+        const savedTheme = localStorage.getItem('verdocs-theme') || 'system';
+        setTheme(savedTheme);
+
         setInterval(() => {{
             fetch('/__verdocs/status')
                 .then(r => r.text())
@@ -1200,6 +1262,8 @@ fn wrap_html(
         }}
 
         document.addEventListener('DOMContentLoaded', () => {{
+            document.getElementById('theme-toggle').value = savedTheme;
+
             // 1. Extract and set language labels
             document.querySelectorAll('pre code').forEach(code => {{
                 const pre = code.parentElement;
@@ -1246,11 +1310,12 @@ fn wrap_html(
         <div id="navbar-left">
             {}
         </div>
-        <div id="navbar-right">
+        <div id="navbar-right" style="display: flex; align-items: center;">
             <div id="search-bar-trigger" onclick="openSearch()">
                 <span>Search...</span>
                 <span style="font-size: 11px; color: #bbb;">⌘K</span>
             </div>
+            {}
         </div>
     </div>
     <div id="sidebar">
@@ -1269,10 +1334,15 @@ fn wrap_html(
 </html>"##,
         config.title,
         favicon_html,
+        light_vars,
+        dark_vars,
+        light_vars,
+        dark_vars,
         main_content_style,
         version_timestamp,
         current_version,
         navbar_logo_html,
+        theme_toggle_html,
         version_options,
         sidebar_html,
         body,

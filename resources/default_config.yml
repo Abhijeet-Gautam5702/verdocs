@@ -13,3 +13,15 @@ theme:
     important: "#fd7e14"
     danger: "#dc3545"
     error: "#bd2130"
+
+dark_theme:
+  primary_color: "#ffffff"
+  background_color: "#0d1117"
+  text_color: "#c9d1d9"
+  colors:
+    tip: "#2ea043"
+    note: "#388bfd"
+    warn: "#d29922"
+    important: "#db6d28"
+    danger: "#f85149"
+    error: "#da3633"
