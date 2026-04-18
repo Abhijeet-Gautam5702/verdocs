@@ -32,13 +32,15 @@ pub struct TocItem {
 pub struct VerdocsParser<'a> {
     config: &'a Config,
     all_versions: Vec<String>,
+    logo_exists: bool,
 }
 
 impl<'a> VerdocsParser<'a> {
-    pub fn new(config: &'a Config, all_versions: Vec<String>) -> Self {
+    pub fn new(config: &'a Config, all_versions: Vec<String>, logo_exists: bool) -> Self {
         Self {
             config,
             all_versions,
+            logo_exists,
         }
     }
 
@@ -128,6 +130,7 @@ impl<'a> VerdocsParser<'a> {
             sidebar,
             &toc,
             version_timestamp,
+            self.logo_exists,
         );
 
         (full_html, toc, h1_title)
@@ -434,11 +437,16 @@ pub fn generate_site(src_path: &PathBuf, version_timestamp: u64) -> Result<()> {
         .with_context(|| format!("Could not read config file at {:?}", config_path))?;
     let config: Config = serde_yaml::from_str(&config_content)?;
 
+    let mut logo_exists = false;
     if let Some(ref logo) = config.navbar_logo {
         let logo_path = src_path.join("assets").join(logo);
-        if !logo_path.exists() {
-            return Err(anyhow!("Navbar logo not found at: {:?}", logo_path));
+        if logo_path.exists() {
+            logo_exists = true;
+        } else {
+            println!("Warning: Navbar logo not found at: {:?}. Using title instead.", logo_path);
         }
+    } else {
+        println!("Note: No navbar_logo provided in config.yml. Using title instead.");
     }
 
     if let Some(ref favicon) = config.favicon {
@@ -474,7 +482,7 @@ pub fn generate_site(src_path: &PathBuf, version_timestamp: u64) -> Result<()> {
     }
     all_versions.sort();
 
-    let verdocs_parser = VerdocsParser::new(&config, all_versions);
+    let verdocs_parser = VerdocsParser::new(&config, all_versions, logo_exists);
 
     for entry in fs::read_dir(src_path)? {
         let entry = entry?;
@@ -678,6 +686,7 @@ fn wrap_html(
     sidebar: &[SidebarItem],
     toc: &[TocItem],
     version_timestamp: u64,
+    logo_exists: bool,
 ) -> String {
     let version_options: String = all_versions
         .iter()
@@ -728,13 +737,24 @@ fn wrap_html(
         String::new()
     };
 
-    let navbar_logo_html = if let Some(ref logo) = config.navbar_logo {
-        format!(
-            r#"<img src="/assets/{}" alt="Logo" style="height: 32px; cursor: pointer;" onclick="window.location.href='/{}/home'">"#,
-            logo, current_version
-        )
+    let navbar_logo_html = if logo_exists {
+        if let Some(ref logo) = config.navbar_logo {
+            format!(
+                r#"<img src="/assets/{}" alt="Logo" style="height: 32px; cursor: pointer;" onclick="window.location.href='/{}/home'">"#,
+                logo, current_version
+            )
+        } else {
+            // This case should theoretically not be hit if logo_exists is true, but for safety:
+            format!(
+                r#"<div style="font-size: 20px; font-weight: bold; color: var(--primary-color); cursor: pointer;" onclick="window.location.href='/{}/home'">{}</div>"#,
+                current_version, config.title
+            )
+        }
     } else {
-        String::new()
+        format!(
+            r#"<div style="font-size: 20px; font-weight: bold; color: var(--primary-color); cursor: pointer;" onclick="window.location.href='/{}/home'">{}</div>"#,
+            current_version, config.title
+        )
     };
 
     let favicon_html = if let Some(ref favicon) = config.favicon {
