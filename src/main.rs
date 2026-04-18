@@ -97,7 +97,8 @@ fn main() -> Result<()> {
 
             watcher.watch(&abs_root, RecursiveMode::Recursive)?;
 
-            println!("Starting preview server at http://localhost:{} ...", port);
+            let url = format!("http://localhost:{}/v1.0.0/home", port);
+            println!("Starting preview server at {} ...", url);
             start_server(&abs_out, *port, version)?;
         }
         Commands::Clean { path } => {

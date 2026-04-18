@@ -1,5 +1,5 @@
 use std::path::{Path, PathBuf};
-use anyhow::{Result, Context};
+use anyhow::{Result, Context, anyhow};
 use std::fs;
 use serde::{Deserialize, Serialize};
 use walkdir::WalkDir;
@@ -173,7 +173,6 @@ pub fn generate_site(src_path: &PathBuf, version_timestamp: u64) -> Result<()> {
         copy(&assets_src, &out_dir, &options)?;
     }
 
-    // 1. Gather all version names
     let mut all_versions = Vec::new();
     for entry in fs::read_dir(src_path)? {
         let entry = entry?;
@@ -185,11 +184,10 @@ pub fn generate_site(src_path: &PathBuf, version_timestamp: u64) -> Result<()> {
             }
         }
     }
-    all_versions.sort(); // Keep them in order
+    all_versions.sort();
 
     let verdocs_parser = VerdocsParser::new(&config, all_versions);
 
-    // 2. Process each version
     for entry in fs::read_dir(src_path)? {
         let entry = entry?;
         let path = entry.path();
@@ -212,14 +210,61 @@ fn process_version(version_src: &Path, version_out: &Path, version_name: &str, p
     for entry in WalkDir::new(version_src) {
         let entry = entry?;
         let path = entry.path();
+        
+        if path.is_dir() {
+            if path == version_src {
+                continue;
+            }
+
+            let dir_name = path.file_name().unwrap().to_str().unwrap();
+            let index_md = path.join(format!("{}.md", dir_name));
+            if !index_md.exists() {
+                return Err(anyhow!(
+                    "Missing required index file: {:?}. Every folder must contain a markdown file with the same name as the folder.",
+                    index_md
+                ));
+            }
+        }
+    }
+
+    for entry in WalkDir::new(version_src) {
+        let entry = entry?;
+        let path = entry.path();
 
         if path.extension().map_or(false, |ext| ext == "md") {
             let content = fs::read_to_string(path)?;
             let full_html = parser.parse(&content, version_name, version_timestamp);
 
             let relative_path = path.strip_prefix(version_src)?;
-            let mut html_path = version_out.join(relative_path);
-            html_path.set_extension("html");
+            let file_stem = path.file_stem().unwrap().to_str().unwrap();
+            
+            let mut route_parts = Vec::new();
+            for component in relative_path.components() {
+                let name = component.as_os_str().to_str().unwrap();
+                if name.ends_with(".md") {
+                    let stem = &name[..name.len()-3];
+                    if let Some(parent) = relative_path.parent() {
+                        if let Some(parent_name) = parent.file_name().and_then(|n| n.to_str()) {
+                            if stem == parent_name {
+                                continue;
+                            }
+                        }
+                    }
+                    route_parts.push(stem);
+                } else {
+                    route_parts.push(name);
+                }
+            }
+            
+            let route = route_parts.join("/");
+            
+            let mut html_path = version_out.join(&route);
+            if !route.is_empty() {
+                fs::create_dir_all(&html_path)?;
+                html_path = html_path.join("index.html");
+            } else {
+                html_path = html_path.join("index.html");
+            }
 
             if let Some(parent) = html_path.parent() {
                 fs::create_dir_all(parent)?;
@@ -227,9 +272,8 @@ fn process_version(version_src: &Path, version_out: &Path, version_name: &str, p
 
             fs::write(&html_path, &full_html)?;
 
-            let route = relative_path.with_extension("").to_str().unwrap().to_string();
             search_index.push(SearchIndexEntry {
-                title: route.clone(),
+                title: file_stem.to_string(),
                 route,
                 content: content.chars().take(200).collect(),
             });
@@ -309,16 +353,12 @@ fn wrap_html(body: &str, title: &str, current_version: &str, all_versions: &[Str
         function switchVersion(newVersion) {{
             const currentPath = window.location.pathname;
             const pathParts = currentPath.split('/');
-            // Expecting path like /v1.0.0/path/to/page.html
-            // In local dev server, it might be /v1.0.0/...
-            // We find the index of the current version and replace it.
             const versionIndex = pathParts.findIndex(part => part === "{}");
             if (versionIndex !== -1) {{
                 pathParts[versionIndex] = newVersion;
                 window.location.pathname = pathParts.join('/');
             }} else {{
-                // Fallback: if we can't find version in path, just go to root of new version
-                window.location.pathname = '/' + newVersion + '/home.html';
+                window.location.pathname = '/' + newVersion + '/home';
             }}
         }}
     </script>

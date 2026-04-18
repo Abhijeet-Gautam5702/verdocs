@@ -30,7 +30,21 @@ pub fn start_server(out_dir: &PathBuf, port: u16, version: Arc<AtomicU64>) -> Re
             path = "index.html".to_string(); // Placeholder for future root
         }
 
-        let file_path = out_dir.join(&path);
+        let mut file_path = out_dir.join(&path);
+
+        if !file_path.exists() || !file_path.is_file() {
+            // Try appending .html
+            let with_html = out_dir.join(format!("{}.html", path));
+            if with_html.exists() && with_html.is_file() {
+                file_path = with_html;
+            } else {
+                // Try index.html in directory
+                let with_index = out_dir.join(&path).join("index.html");
+                if with_index.exists() && with_index.is_file() {
+                    file_path = with_index;
+                }
+            }
+        }
 
         if file_path.exists() && file_path.is_file() {
             let content = fs::read(&file_path)?;
