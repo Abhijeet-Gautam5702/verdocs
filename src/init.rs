@@ -4,6 +4,14 @@ use anyhow::Result;
 use crate::config::Config;
 
 pub fn init_project(path: &PathBuf) -> Result<()> {
+    // Check if project is already initialized
+    if path.join("config.yml").exists() {
+        return Err(anyhow::anyhow!(
+            "Project already initialized at {:?}. Use 'verdocs clean' first if you want to reset.",
+            path
+        ));
+    }
+
     fs::create_dir_all(path.join("assets"))?;
     fs::create_dir_all(path.join("search-index"))?;
 

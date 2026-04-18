@@ -37,5 +37,8 @@ pub enum Commands {
         /// The directory path to clean
         #[arg(default_value = ".")]
         path: PathBuf,
+        /// Remove versioned directories as well
+        #[arg(short, long)]
+        full: bool,
     },
 }

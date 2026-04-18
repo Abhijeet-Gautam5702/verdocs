@@ -101,9 +101,10 @@ fn main() -> Result<()> {
             println!("Starting preview server at {} ...", url);
             start_server(&abs_out, *port, version)?;
         }
-        Commands::Clean { path } => {
-            clean_project(path)?;
-            println!("Project cleaned successfully at: {:?}", path);
+        Commands::Clean { path, full } => {
+            clean_project(path, *full)?;
+            let abs_path = std::fs::canonicalize(path)?;
+            println!("Project cleaned successfully at: {:?}", abs_path);
         }
     }
 
