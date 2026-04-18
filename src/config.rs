@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Config {
@@ -12,6 +13,8 @@ pub struct ThemeConfig {
     pub primary_color: String,
     pub background_color: String,
     pub text_color: String,
+    #[serde(alias = "admonitions")]
+    pub colors: HashMap<String, String>,
 }
 
 impl Default for Config {

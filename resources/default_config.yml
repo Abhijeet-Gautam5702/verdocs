@@ -4,3 +4,10 @@ theme:
   primary_color: "#007bff"
   background_color: "#ffffff"
   text_color: "#333333"
+  colors:
+    tip: "#28a745"
+    note: "#17a2b8"
+    warn: "#ffc107"
+    important: "#fd7e14"
+    danger: "#dc3545"
+    error: "#bd2130"
