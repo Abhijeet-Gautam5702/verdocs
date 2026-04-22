@@ -36,3 +36,6 @@ config.yml
 # v*/
 
 todo.md
+.DS_Store
+
+dist/
