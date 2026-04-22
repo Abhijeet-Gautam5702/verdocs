@@ -1,7 +1,8 @@
+use crate::cli::Host;
 use crate::config::Config;
-use anyhow::{Context, Result, anyhow};
-use fs_extra::dir::{CopyOptions, copy};
-use pulldown_cmark::{Event, Options, Parser as MarkdownParser, Tag, TagEnd, html};
+use anyhow::{anyhow, Context, Result};
+use fs_extra::dir::{copy, CopyOptions};
+use pulldown_cmark::{html, Event, Options, Parser as MarkdownParser, Tag, TagEnd};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::fs;
@@ -92,9 +93,7 @@ impl<'a> VerdocsParser<'a> {
                         id: id.clone(),
                         level: level_num,
                     });
-                    new_events.push(Event::Html(
-                        format!("<h{} id=\"{}\">", level_num, id).into(),
-                    ));
+                    new_events.push(Event::Html(format!("<h{} id=\"{}\">", level_num, id).into()));
                     i += 1;
                     while i < events.len() {
                         if let Event::End(TagEnd::Heading(_)) = &events[i] {
@@ -158,8 +157,15 @@ impl<'a> VerdocsParser<'a> {
             }) = event
             {
                 let dest = dest_url.to_string();
+                let base_path = self.config.base_path.clone().unwrap_or_default();
+                let base_path_url = if base_path.is_empty() {
+                    "".to_string()
+                } else {
+                    format!("/{}", base_path.trim_matches('/'))
+                };
+
                 let final_dest = if dest.starts_with("assets/") {
-                    format!("/{}", dest)
+                    format!("{}/{}", base_path_url, dest)
                 } else {
                     dest
                 };
@@ -194,10 +200,13 @@ impl<'a> VerdocsParser<'a> {
                 }) => {
                     let dest = dest_url.to_string();
                     if dest.starts_with("http") {
-                        new_events.push(Event::Html(format!(
-                            r#"<a href="{}" title="{}" target="_blank" rel="noopener noreferrer">"#,
-                            dest, title
-                        ).into()));
+                        new_events.push(Event::Html(
+                            format!(
+                                r#"<a href="{}" title="{}" target="_blank" rel="noopener noreferrer">"#,
+                                dest, title
+                            )
+                            .into(),
+                        ));
 
                         i += 1;
                         let mut depth = 1;
@@ -221,8 +230,9 @@ impl<'a> VerdocsParser<'a> {
                             }
                         }
                     } else {
+                        let base_path = self.config.base_path.clone().unwrap_or_default();
                         let final_dest =
-                            resolve_internal_link(current_version, current_route, &dest);
+                            resolve_internal_link(current_version, current_route, &dest, &base_path);
                         new_events.push(Event::Start(Tag::Link {
                             link_type: *link_type,
                             dest_url: final_dest.into(),
@@ -275,10 +285,8 @@ impl<'a> VerdocsParser<'a> {
                                     if let Some(_color) = self.config.theme.colors.get(&tag_name) {
                                         if tag_type == Some("admonition") {
                                             new_events.push(Event::Html(
-                                                self.render_admonition_start(
-                                                    &tag_name, title,
-                                                )
-                                                .into(),
+                                                self.render_admonition_start(&tag_name, title)
+                                                    .into(),
                                             ));
                                             tag_stack.push("div");
                                             i += 3;
@@ -374,7 +382,12 @@ impl<'a> VerdocsParser<'a> {
     }
 }
 
-fn resolve_internal_link(current_version: &str, current_route: &str, dest: &str) -> String {
+fn resolve_internal_link(
+    current_version: &str,
+    current_route: &str,
+    dest: &str,
+    base_path: &str,
+) -> String {
     let mut path_to_resolve = dest.to_string();
 
     if path_to_resolve.starts_with("@/") {
@@ -382,8 +395,8 @@ fn resolve_internal_link(current_version: &str, current_route: &str, dest: &str)
     } else if path_to_resolve.starts_with('/') {
         path_to_resolve = path_to_resolve.trim_start_matches('/').to_string();
     } else {
-        let base_path = PathBuf::from(current_route);
-        let mut final_path = base_path;
+        let bp = PathBuf::from(current_route);
+        let mut final_path = bp;
         for component in Path::new(&path_to_resolve).components() {
             match component {
                 std::path::Component::ParentDir => {
@@ -415,8 +428,15 @@ fn resolve_internal_link(current_version: &str, current_route: &str, dest: &str)
         }
     }
 
+    let base = if base_path.is_empty() {
+        "".to_string()
+    } else {
+        format!("/{}", base_path.trim_matches('/'))
+    };
+
     format!(
-        "/{}/{}",
+        "{}/{}/{}",
+        base,
         current_version,
         path_to_resolve.trim_start_matches('/')
     )
@@ -430,7 +450,7 @@ fn slugify(text: &str) -> String {
         .join("-")
 }
 
-pub fn generate_site(src_path: &PathBuf, version_timestamp: u64) -> Result<()> {
+pub fn generate_site(src_path: &PathBuf, version_timestamp: u64, host: Host) -> Result<()> {
     let config_path = src_path.join("config.yml");
     let config_content = fs::read_to_string(&config_path)
         .with_context(|| format!("Could not read config file at {:?}", config_path))?;
@@ -442,7 +462,10 @@ pub fn generate_site(src_path: &PathBuf, version_timestamp: u64) -> Result<()> {
         if logo_path.exists() {
             logo_exists = true;
         } else {
-            println!("Warning: Navbar logo not found at: {:?}. Using title instead.", logo_path);
+            println!(
+                "Warning: Navbar logo not found at: {:?}. Using title instead.",
+                logo_path
+            );
         }
     } else {
         println!("Note: No navbar_logo provided in config.yml. Using title instead.");
@@ -481,7 +504,7 @@ pub fn generate_site(src_path: &PathBuf, version_timestamp: u64) -> Result<()> {
     }
     all_versions.sort();
 
-    let verdocs_parser = VerdocsParser::new(&config, all_versions, logo_exists);
+    let verdocs_parser = VerdocsParser::new(&config, all_versions.clone(), logo_exists);
 
     for entry in fs::read_dir(src_path)? {
         let entry = entry?;
@@ -499,6 +522,48 @@ pub fn generate_site(src_path: &PathBuf, version_timestamp: u64) -> Result<()> {
                 )?;
             }
         }
+    }
+
+    // Create root index.html redirecting to the latest version
+    if let Some(latest_version) = all_versions.last() {
+        let base_path = config.base_path.clone().unwrap_or_default();
+        let base_path_url = if base_path.is_empty() {
+            "".to_string()
+        } else {
+            format!("/{}", base_path.trim_matches('/'))
+        };
+
+        let redirect_url = format!("{}/{}/home", base_path_url, latest_version);
+        let redirect_html = format!(
+            r##"<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="refresh" content="0; url={}" />
+    <script type="text/javascript">
+        window.location.href = "{}"
+    </script>
+</head>
+<body>
+    <p>If you are not redirected, <a href="{}">click here</a>.</p>
+</body>
+</html>"##,
+            redirect_url, redirect_url, redirect_url
+        );
+        fs::write(out_dir.join("index.html"), redirect_html)?;
+    }
+
+    // Host-specific optimizations
+    match host {
+        Host::Vercel => {
+            let vercel_json = r#"{
+  "cleanUrls": true
+}"#;
+            fs::write(out_dir.join("vercel.json"), vercel_json)?;
+        }
+        Host::GhPages => {
+            fs::write(out_dir.join(".nojekyll"), "")?;
+        }
+        Host::Vps => {}
     }
 
     Ok(())
@@ -687,6 +752,13 @@ fn wrap_html(
     version_timestamp: u64,
     logo_exists: bool,
 ) -> String {
+    let base_path = config.base_path.clone().unwrap_or_default();
+    let base_path_url = if base_path.is_empty() {
+        "".to_string()
+    } else {
+        format!("/{}", base_path.trim_matches('/'))
+    };
+
     let version_options: String = all_versions
         .iter()
         .map(|v| {
@@ -700,7 +772,7 @@ fn wrap_html(
         .collect::<Vec<_>>()
         .join("\n");
 
-    let sidebar_html = render_sidebar(sidebar, current_version, current_route, 0);
+    let sidebar_html = render_sidebar(sidebar, current_version, current_route, 0, &base_path_url);
 
     let has_toc = !toc.is_empty();
     let toc_html: String = if has_toc {
@@ -757,25 +829,25 @@ fn wrap_html(
     let navbar_logo_html = if logo_exists {
         if let Some(ref logo) = config.navbar_logo {
             format!(
-                r#"<img src="/assets/{}" alt="Logo" style="height: 32px; cursor: pointer;" onclick="window.location.href='/{}/home'">"#,
-                logo, current_version
+                r#"<img src="{}/assets/{}" alt="Logo" style="height: 32px; cursor: pointer;" onclick="window.location.href='{}/{}/home'">"#,
+                base_path_url, logo, base_path_url, current_version
             )
         } else {
             // This case should theoretically not be hit if logo_exists is true, but for safety:
             format!(
-                r#"<div style="font-size: 20px; font-weight: bold; color: var(--primary-color); cursor: pointer;" onclick="window.location.href='/{}/home'">{}</div>"#,
-                current_version, config.title
+                r#"<div style="font-size: 20px; font-weight: bold; color: var(--primary-color); cursor: pointer;" onclick="window.location.href='{}/{}/home'">{}</div>"#,
+                base_path_url, current_version, config.title
             )
         }
     } else {
         format!(
-            r#"<div style="font-size: 20px; font-weight: bold; color: var(--primary-color); cursor: pointer;" onclick="window.location.href='/{}/home'">{}</div>"#,
-            current_version, config.title
+            r#"<div style="font-size: 20px; font-weight: bold; color: var(--primary-color); cursor: pointer;" onclick="window.location.href='{}/{}/home'">{}</div>"#,
+            base_path_url, current_version, config.title
         )
     };
 
     let favicon_html = if let Some(ref favicon) = config.favicon {
-        format!(r#"<link rel="icon" href="/assets/{}">"#, favicon)
+        format!(r#"<link rel="icon" href="{}/assets/{}">"#, base_path_url, favicon)
     } else {
         String::new()
     };
@@ -1127,6 +1199,7 @@ fn wrap_html(
     <script>
         window.__verdocs_version = "{}";
         window.__verdocs_current_version_name = "{}";
+        window.__verdocs_base_path = "{}";
 
         function setTheme(theme) {{
             if (theme === 'system') {{
@@ -1140,13 +1213,15 @@ fn wrap_html(
         setTheme(savedTheme);
 
         setInterval(() => {{
-            fetch('/__verdocs/status')
-                .then(r => r.text())
-                .then(v => {{
-                    if (v !== window.__verdocs_version) {{
-                        location.reload();
-                    }}
-                }});
+            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {{
+                fetch(window.__verdocs_base_path + '/__verdocs/status')
+                    .then(r => r.text())
+                    .then(v => {{
+                        if (v !== window.__verdocs_version) {{
+                            location.reload();
+                        }}
+                    }});
+            }}
         }}, 1000);
 
         function switchVersion(newVersion) {{
@@ -1157,7 +1232,7 @@ fn wrap_html(
                 pathParts[versionIndex] = newVersion;
                 window.location.pathname = pathParts.join('/');
             }} else {{
-                window.location.pathname = '/' + newVersion + '/home';
+                window.location.pathname = window.__verdocs_base_path + '/' + newVersion + '/home';
             }}
         }}
 
@@ -1166,7 +1241,7 @@ fn wrap_html(
 
         async function initSearch() {{
             if (searchIndex) return;
-            const response = await fetch(`/search-index/${{window.__verdocs_current_version_name.replace(/\./g, '-')}}.json`);
+            const response = await fetch(window.__verdocs_base_path + `/search-index/${{window.__verdocs_current_version_name.replace(/\./g, '-')}}.json`);
             searchIndex = await response.json();
         }}
 
@@ -1219,7 +1294,7 @@ fn wrap_html(
                     <div class="result-line">${{escapeHtml(before)}}<mark>${{escapeHtml(match)}}</mark>${{escapeHtml(after)}}</div>
                     <div class="result-title">${{escapeHtml(res.title)}}</div>
                 `;
-                div.onclick = () => window.location.href = `/${{window.__verdocs_current_version_name}}/${{res.route}}`;
+                div.onclick = () => window.location.href = window.__verdocs_base_path + `/${{window.__verdocs_current_version_name}}/${{res.route}}`;
                 resultsContainer.appendChild(div);
             }});
         }}
@@ -1341,6 +1416,7 @@ fn wrap_html(
         main_content_style,
         version_timestamp,
         current_version,
+        base_path_url,
         navbar_logo_html,
         theme_toggle_html,
         version_options,
@@ -1354,6 +1430,7 @@ fn render_sidebar(
     version: &str,
     current_route: &str,
     depth: usize,
+    base_path_url: &str,
 ) -> String {
     let mut html = String::new();
     let indent = depth * 15 + 20;
@@ -1362,8 +1439,8 @@ fn render_sidebar(
         let is_descendant = current_route.starts_with(&item.route) && !item.route.is_empty();
         let active_class = if is_active { "active" } else { "" };
         html.push_str(&format!(
-            r#"<a href="/{}/{}" class="sidebar-item {}" style="padding-left: {}px;">{}</a>"#,
-            version, item.route, active_class, indent, item.title
+            r#"<a href="{}/{}/{}" class="sidebar-item {}" style="padding-left: {}px;">{}</a>"#,
+            base_path_url, version, item.route, active_class, indent, item.title
         ));
         if !item.children.is_empty() {
             let expanded_class = if is_descendant || is_active {
@@ -1380,6 +1457,7 @@ fn render_sidebar(
                 version,
                 current_route,
                 depth + 1,
+                base_path_url,
             ));
             html.push_str("</div>");
         }

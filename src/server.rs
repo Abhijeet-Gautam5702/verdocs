@@ -1,3 +1,4 @@
+use crate::config::Config;
 use anyhow::{Result, anyhow};
 use std::fs;
 use std::path::{PathBuf, Path};
@@ -7,16 +8,28 @@ use regex::Regex;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 
-pub fn start_server(root_path: &PathBuf, port: u16, version: Arc<AtomicU64>) -> Result<()> {
+pub fn start_server(root_path: &PathBuf, port: u16, version: Arc<AtomicU64>, config: Config) -> Result<()> {
     let addr = format!("127.0.0.1:{}", port);
     let server = Server::http(&addr).map_err(|e| anyhow!("Failed to start server: {}", e))?;
     let out_dir = root_path.join("out");
 
-    println!("Preview server running at: http://{}", addr);
+    let base_path = config.base_path.unwrap_or_default();
+    let base_path = if base_path.is_empty() {
+        "".to_string()
+    } else {
+        format!("/{}", base_path.trim_matches('/'))
+    };
+
+    println!("Preview server running at: http://{}{}", addr, base_path);
     println!("Press Ctrl+C to stop.");
 
     for request in server.incoming_requests() {
-        let url = request.url();
+        let mut url = request.url().to_string();
+
+        // Handle base_path stripping
+        if !base_path.is_empty() && url.starts_with(&base_path) {
+            url = url[base_path.len()..].to_string();
+        }
 
         if url == "/__verdocs/status" {
             let v = version.load(Ordering::SeqCst);

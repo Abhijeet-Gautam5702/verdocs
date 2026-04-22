@@ -6,7 +6,8 @@ mod init;
 mod server;
 
 use crate::clean::clean_project;
-use crate::cli::{Cli, Commands};
+use crate::cli::{Cli, Commands, Host};
+use crate::config::Config;
 use crate::generator::generate_site;
 use crate::init::init_project;
 use crate::server::start_server;
@@ -31,18 +32,19 @@ fn main() -> Result<()> {
             let abs_path = std::fs::canonicalize(path)?;
             println!("Project initialized successfully at: {:?}", abs_path);
         }
-        Commands::Generate { path } => {
+        Commands::Generate { path, host } => {
             let now = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
-            generate_site(path, now)?;
+            generate_site(path, now, host.clone())?;
             println!("Site generated successfully from: {:?}", path);
         }
         Commands::Preview { path, port } => {
+            let config = Config::load(path)?;
             let version_ts = Arc::new(AtomicU64::new(
                 SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs(),
             ));
 
             // Initial generation
-            generate_site(path, version_ts.load(Ordering::SeqCst))?;
+            generate_site(path, version_ts.load(Ordering::SeqCst), Host::Vps)?;
 
             // Canonicalize paths for reliable filtering
             let abs_root = std::fs::canonicalize(path)?;
@@ -90,7 +92,7 @@ fn main() -> Result<()> {
                                     .duration_since(UNIX_EPOCH)
                                     .unwrap()
                                     .as_secs();
-                                if let Err(e) = generate_site(&abs_root_clone, new_v) {
+                                if let Err(e) = generate_site(&abs_root_clone, new_v, Host::Vps) {
                                     println!("Error re-generating site: {}", e);
                                 } else {
                                     version_clone.store(new_v, Ordering::SeqCst);
@@ -104,9 +106,16 @@ fn main() -> Result<()> {
 
             watcher.watch(&abs_root, RecursiveMode::Recursive)?;
 
-            let url = format!("http://localhost:{}/v1.0.0/home", port);
+            let base_path = config.base_path.clone().unwrap_or_default();
+            let base_path = if base_path.is_empty() {
+                "".to_string()
+            } else {
+                format!("/{}", base_path.trim_matches('/'))
+            };
+
+            let url = format!("http://localhost:{}{}/index.html", port, base_path);
             println!("Starting preview server at {} ...", url);
-            start_server(path, *port, version_ts)?;
+            start_server(path, *port, version_ts, config)?;
         }
         Commands::Clean { path, full } => {
             clean_project(path, *full)?;

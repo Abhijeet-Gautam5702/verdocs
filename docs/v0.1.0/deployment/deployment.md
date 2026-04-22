@@ -1,117 +1,133 @@
 # Deployment Strategies
 
-Once you have generated your documentation site using the `verdocs generate` command, you will find a production-ready version of your website inside the `out/` directory. Because Verdocs produces a completely static site, it can be hosted on virtually any platform that serves static files.
+Verdocs makes deployment seamless by offering host-specific optimizations. Once you've written your documentation, you can generate a production-ready `out/` directory tailored for your hosting provider.
 
-This guide provides detailed deployment instructions for the most common hosting environments.
+## The `--host` Flag
 
----
+The `verdocs generate` command includes a `--host` flag that automatically configures the output directory for your target platform:
 
-## 1. Vercel (Recommended)
-
-Vercel is a top-tier platform for hosting static sites with zero-configuration and global CDN support.
-
-### Configuration
-To support Verdocs' clean, folder-based routing, create a `vercel.json` file in your project's root:
-
-```json
-{
-  "cleanUrls": true
-}
-```
-
-### Deployment via CLI
-1.  **Install the Vercel CLI:** `npm i -g vercel`
-2.  **Deploy the Output:** From your project root, run `vercel out`.
-3.  **Follow the Prompts:** Link your project to Vercel and confirm the deployment settings.
-
-### Continuous Deployment (Git)
-You can also connect your Git repository to Vercel. In the Vercel dashboard, set your **Output Directory** to `out`. If you have a custom build step to run `verdocs generate`, you may need to include the Verdocs binary in your build environment.
-
----
-
-## 2. Nginx (Personal VPS)
-
-If you are managing your own server, Nginx is a high-performance choice for serving static content efficiently.
-
-### Preparation
-1.  Generate your site: `verdocs generate`.
-2.  Upload the contents of your `out/` folder to your server (e.g., using `scp` or `rsync` to `/var/www/docs`).
-
-### Nginx Configuration
-Update your Nginx site configuration (usually found in `/etc/nginx/sites-available/`) to correctly handle Verdocs' internal routing:
-
-```nginx
-server {
-    listen 80;
-    server_name yourdomain.com;
-    root /var/www/docs;
-    index index.html;
-
-    location / {
-        # This ensures /v1.0.0/home correctly serves /v1.0.0/home/index.html
-        try_files $uri $uri/ $uri.html =404;
-    }
-
-    # Optional: Cache control for assets
-    location /assets/ {
-        expires 1y;
-        add_header Cache-Control "public, no-transform";
-    }
-}
-```
-
-After updating the configuration, test and restart Nginx:
 ```bash
-sudo nginx -t
-sudo systemctl restart nginx
+verdocs generate --host <vps | vercel | gh-pages>
 ```
+
+---
+
+## 1. Personal VPS (Nginx/Apache)
+
+Hosting on a VPS gives you full control over your documentation. By using `--host vps`, Verdocs ensures that visiting your root domain automatically redirects to the latest documentation version.
+
+### Steps to Deploy
+
+1.  **Generate the site:**
+    ```bash
+    verdocs generate --host vps
+    ```
+2.  **Upload the files:**
+    Copy the contents of the `out/` directory to your server's web root (e.g., `/var/www/docs`):
+    ```bash
+    scp -r out/* user@your-vps-ip:/var/www/docs
+    ```
+3.  **Configure Nginx:**
+    Ensure your site configuration handles folder-based routing:
+    ```nginx
+    server {
+        listen 80;
+        server_name docs.yourdomain.com;
+        root /var/www/docs;
+        index index.html;
+
+        location / {
+            # Standard static file serving with .html fallback
+            try_files $uri $uri/ $uri.html =404;
+        }
+    }
+    ```
+3. **Restart Nginx:**
+    ```bash
+    sudo systemctl restart nginx
+    ```
+
+---
+
+## 2. Caddy (Modern VPS)
+
+Caddy is a powerful, enterprise-ready open source web server with automatic HTTPS. Serving a Verdocs site with Caddy requires minimal configuration.
+
+### Steps to Deploy
+
+1.  **Generate the site:**
+    ```bash
+    verdocs generate --host vps
+    ```
+2.  **Upload the files:**
+    Transfer the `out/` directory content to your server (e.g., `/var/www/docs`).
+3.  **Configure Caddy:**
+    Create or update your `Caddyfile`:
+    ```caddy
+    docs.yourdomain.com {
+        root * /var/www/docs
+        file_server
+
+        # Handle clean URLs (e.g., /v1.0.0/home -> /v1.0.0/home.html)
+        try_files {path} {path}/ {path}.html
+    }
+    ```
+4.  **Restart Caddy:**
+    ```bash
+    sudo systemctl reload caddy
+    ```
+
+---
+
+## 3. Vercel
+
+Vercel is optimized for speed and global delivery. Using `--host vercel` automatically generates the required configuration for clean routing.
+
+### Steps to Deploy
+
+1.  **Generate the site:**
+    ```bash
+    verdocs generate --host vercel
+    ```
+2.  **Deploy via CLI:**
+    ```bash
+    vercel out --prod
+    ```
+    *Verdocs automatically creates a `vercel.json` file inside `out/` with `cleanUrls: true`, so no manual configuration is needed.*
 
 ---
 
 ## 3. GitHub Pages
 
-GitHub Pages is a free and reliable option for hosting documentation alongside your source code.
+Perfect for hosting documentation directly from your repository. Using `--host gh-pages` handles the specific requirements of GitHub's environment.
 
-### Deployment via Git Branch
-1.  **Create a Deployment Branch:** Use `git checkout -b gh-pages`.
-2.  **Prepare the Content:** Replace the root content of this branch with the contents of your `out/` folder.
-3.  **Push to GitHub:** `git push origin gh-pages`.
+### Steps to Deploy
 
-### Deployment via GitHub Actions (Recommended)
-You can automate the entire build and deployment process using GitHub Actions. Create a `.github/workflows/deploy.yml` file to run `verdocs generate` and deploy the `out/` folder whenever you push changes to your main branch.
-
-**Note:** GitHub Pages handles folder-based routing (`/folder/` -> `/folder/index.html`) automatically, so no additional configuration is required.
+1.  **Configure Base Path:**
+    If your site is at `username.github.io/repo-name/`, set `base_path: /repo-name/` in your `config.yml`.
+2.  **Generate the site:**
+    ```bash
+    verdocs generate --host gh-pages
+    ```
+3.  **Push to Branch:**
+    Push the contents of the `out/` folder to your `gh-pages` branch.
+    *Verdocs automatically creates a `.nojekyll` file to ensure all documentation folders are served correctly.*
 
 ---
 
 ## 4. Docker
 
-For teams using container orchestration like Kubernetes or services like Coolify, you can easily containerize your documentation site.
+If you prefer containerized deployment, you can wrap the output in a lightweight Nginx container.
 
-### Create a Dockerfile
-Create a `Dockerfile` in your project root using a lightweight Nginx image:
-
-```dockerfile
-FROM nginx:alpine
-
-# Copy the generated site to the default Nginx html directory
-COPY ./out /usr/share/nginx/html
-
-# Expose port 80
-EXPOSE 80
-```
-
-### Build and Run
-1.  **Build the Image:** `docker build -t my-docs .`
-2.  **Run the Container:** `docker run -p 8080:80 my-docs`
-
-Your documentation will now be available at `http://localhost:8080`. The default Nginx configuration on Alpine will automatically resolve `index.html` files within your versioned directories.
-
----
-
-## 5. Other Static Hosting Providers
-
-Because the output is entirely static, Verdocs is compatible with many other platforms:
--   **Netlify:** Set the Publish directory to `out`.
--   **Cloudflare Pages:** Connect your Git repository and set the Output directory to `out`.
--   **AWS S3 + CloudFront:** Sync the `out/` folder to an S3 bucket and enable Static Website Hosting.
+1.  **Generate:** `verdocs generate --host vps`
+2.  **Dockerfile:**
+    ```dockerfile
+    FROM nginx:alpine
+    COPY ./out /usr/share/nginx/html
+    EXPOSE 80
+    ```
+3.  **Build and Run:**
+    ```bash
+    docker build -t my-docs .
+    docker run -p 80:80 my-docs
+    ```

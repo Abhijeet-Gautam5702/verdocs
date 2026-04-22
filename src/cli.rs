@@ -1,4 +1,4 @@
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueEnum};
 use std::path::PathBuf;
 
 #[derive(Parser)]
@@ -8,6 +8,13 @@ use std::path::PathBuf;
 pub struct Cli {
     #[command(subcommand)]
     pub command: Commands,
+}
+
+#[derive(ValueEnum, Clone, Debug)]
+pub enum Host {
+    Vps,
+    Vercel,
+    GhPages,
 }
 
 #[derive(Subcommand)]
@@ -23,6 +30,9 @@ pub enum Commands {
         /// The source directory path for the documentation project
         #[arg(default_value = ".")]
         path: PathBuf,
+        /// The hosting platform for optimization
+        #[arg(short, long, value_enum, default_value = "vps")]
+        host: Host,
     },
     /// Preview the documentation site in your browser
     Preview {
