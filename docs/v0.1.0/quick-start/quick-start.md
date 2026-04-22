@@ -7,7 +7,7 @@ This guide will walk you through installing Verdocs and deploying your first ver
 Install Verdocs using the official installer script:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/verdocs/verdocs/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/Abhijeet-Gautam5702/verdocs/main/scripts/install.sh | bash
 ```
 
 ## 2. Verify Installation

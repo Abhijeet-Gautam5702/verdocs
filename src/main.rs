@@ -13,12 +13,17 @@ use crate::server::start_server;
 use anyhow::Result;
 use clap::Parser;
 use notify::{Event, RecursiveMode, Watcher};
+use std::fs;
+use std::process::Command;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
 
+const INSTALL_COMMAND: &str = "curl -fsSL https://raw.githubusercontent.com/Abhijeet-Gautam5702/verdocs/main/scripts/install.sh | bash";
+
 fn main() -> Result<()> {
     let cli = Cli::parse();
+    let version = env!("CARGO_PKG_VERSION");
 
     match &cli.command {
         Commands::Init { path } => {
@@ -32,12 +37,12 @@ fn main() -> Result<()> {
             println!("Site generated successfully from: {:?}", path);
         }
         Commands::Preview { path, port } => {
-            let version = Arc::new(AtomicU64::new(
+            let version_ts = Arc::new(AtomicU64::new(
                 SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs(),
             ));
 
             // Initial generation
-            generate_site(path, version.load(Ordering::SeqCst))?;
+            generate_site(path, version_ts.load(Ordering::SeqCst))?;
 
             // Canonicalize paths for reliable filtering
             let abs_root = std::fs::canonicalize(path)?;
@@ -45,7 +50,7 @@ fn main() -> Result<()> {
 
             let abs_root_clone = abs_root.clone();
             let abs_out_clone = abs_out.clone();
-            let version_clone = version.clone();
+            let version_clone = version_ts.clone();
 
             // Set up file watcher
             let mut watcher =
@@ -68,7 +73,9 @@ fn main() -> Result<()> {
                                 // 2. Get path relative to the root to avoid matching parent directory names
                                 if let Ok(rel_p) = abs_p.strip_prefix(&abs_root_clone) {
                                     let first_component = rel_p.components().next();
-                                    if let Some(std::path::Component::Normal(name)) = first_component {
+                                    if let Some(std::path::Component::Normal(name)) =
+                                        first_component
+                                    {
                                         let s = name.to_str().unwrap_or("");
                                         // ONLY watch versioned folders or config.yml
                                         if s.starts_with('v') || s == "config.yml" {
@@ -99,12 +106,64 @@ fn main() -> Result<()> {
 
             let url = format!("http://localhost:{}/v1.0.0/home", port);
             println!("Starting preview server at {} ...", url);
-            start_server(path, *port, version)?;
+            start_server(path, *port, version_ts)?;
         }
         Commands::Clean { path, full } => {
             clean_project(path, *full)?;
             let abs_path = std::fs::canonicalize(path)?;
             println!("Project cleaned successfully at: {:?}", abs_path);
+        }
+        Commands::Uninstall => {
+            println!("Uninstalling verdocs v{}...", version);
+            let home_dir = dirs::home_dir().unwrap_or_default();
+            let verdocs_dir_path = home_dir.join(".verdocs");
+
+            // remove config/analytics dir
+            if verdocs_dir_path.exists() {
+                println!("Removing directory: {}", verdocs_dir_path.display());
+                fs::remove_dir_all(&verdocs_dir_path)?;
+            }
+
+            // remove binary
+            let binary_path = std::env::current_exe()?;
+            println!("Removing binary: {}", binary_path.display());
+            match fs::remove_file(&binary_path) {
+                Ok(()) => {
+                    println!("verdocs v{} uninstalled successfully", version);
+                }
+                Err(e) => {
+                    if e.kind() == std::io::ErrorKind::PermissionDenied {
+                        eprintln!("[ERROR] Uninstall Failed: PERMISSION DENIED");
+                        println!("Try running with sudo:");
+                        println!("  sudo verdocs uninstall");
+                    } else {
+                        eprintln!("[ERROR] Uninstall Failed: {}", e);
+                    }
+                    return Err(e.into());
+                }
+            }
+        }
+        Commands::SelfUpdate => {
+            println!("Updating verdocs...");
+            match Command::new("sh").arg("-c").arg(INSTALL_COMMAND).status() {
+                Ok(status) => {
+                    if status.success() {
+                        println!("verdocs updated successfully");
+                    } else {
+                        eprintln!("[ERROR] Update script failed with status: {}", status);
+                    }
+                }
+                Err(e) => {
+                    if e.kind() == std::io::ErrorKind::PermissionDenied {
+                        eprintln!("[ERROR] Failed to update verdocs: PERMISSION DENIED");
+                        println!("Try running with sudo:");
+                        println!("  sudo verdocs self-update");
+                    } else {
+                        eprintln!("[ERROR] Failed to update verdocs: {}", e);
+                    }
+                    return Err(e.into());
+                }
+            }
         }
     }
 

@@ -1,9 +1,9 @@
 #!/bin/bash
 set -e
 
-# ---------------------------------------
+# --------------------------------------
 # Project-specific configuration
-# ---------------------------------------
+# --------------------------------------
 BINARY_NAME="verdocs"
 # Automatically detect the project root relative to this script's location
 PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"

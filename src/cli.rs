@@ -42,4 +42,8 @@ pub enum Commands {
         #[arg(short, long)]
         full: bool,
     },
+    /// Update Verdocs to the latest version
+    SelfUpdate,
+    /// Uninstall Verdocs from your system
+    Uninstall,
 }

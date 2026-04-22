@@ -105,6 +105,38 @@ verdocs clean [PATH] [OPTIONS]
 
 ---
 
+### `self-update`
+
+Updates Verdocs to the latest version.
+
+**Usage:**
+```bash
+verdocs self-update
+```
+
+**What it does:**
+- Downloads and executes the latest installation script from the official repository.
+- Replaces the current `verdocs` binary with the latest version.
+- Requires `sudo` if the binary is installed in a protected directory like `/usr/local/bin`.
+
+---
+
+### `uninstall`
+
+Removes the Verdocs binary and its configuration directory from your system.
+
+**Usage:**
+```bash
+verdocs uninstall
+```
+
+**What it does:**
+- Deletes the `~/.verdocs` configuration and analytics directory.
+- Deletes the `verdocs` binary from its current installation path.
+- Requires `sudo` if the binary is installed in a protected directory.
+
+---
+
 ## Global Options
 
 - `-V`, `--version`: Displays the current version of the Verdocs CLI.
