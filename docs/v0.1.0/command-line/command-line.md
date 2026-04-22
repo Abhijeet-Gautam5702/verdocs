@@ -46,17 +46,24 @@ Builds your documentation project into a production-ready static website.
 
 **Usage:**
 ```bash
-verdocs generate [PATH]
+verdocs generate [PATH] [OPTIONS]
 ```
 
 **Arguments:**
 - `PATH`: The source directory of your documentation project (defaults to `.`).
 
+**Options:**
+- `-h`, `--host <HOST>`: Specifies the target hosting platform for optimization. Supported values: `vps` (default), `vercel`, `gh-pages`.
+
 **What it does:**
 - Validates the project structure and `config.yml`.
 - Parses all Markdown files within versioned folders.
 - Generates a client-side search index for each version.
-- Produces a fully static `out/` directory containing the HTML, CSS, and JS files.
+- Produces a fully static `out/` directory containing optimized HTML, CSS, and JS.
+- **Host Optimizations:** 
+    - `vps`: Creates a root `index.html` redirector.
+    - `vercel`: Creates `index.html` and `vercel.json` for clean URLs.
+    - `gh-pages`: Creates `index.html` and `.nojekyll`.
 
 ---
 
