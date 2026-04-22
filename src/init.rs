@@ -19,11 +19,32 @@ pub fn init_project(path: &PathBuf) -> Result<()> {
     let logo = include_bytes!("../resources/verdocs-logo.png");
     fs::write(path.join("assets/verdocs-logo.png"), logo)?;
 
-    // Create v1.0.0 - Initial Release
-    create_v1_0_0(path)?;
-    
-    // Create v1.1.0 - Feature Update
-    create_v1_1_0(path)?;
+    // Check if any versioned folders already exist
+    let mut has_versioned_folders = false;
+    if let Ok(entries) = fs::read_dir(path) {
+        for entry in entries.flatten() {
+            if let Ok(file_type) = entry.file_type() {
+                if file_type.is_dir() {
+                    if let Some(name) = entry.file_name().to_str() {
+                        if name.starts_with('v') {
+                            has_versioned_folders = true;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if has_versioned_folders {
+        println!("Existing versioned folders detected. Skipping sample folder creation.");
+    } else {
+        // Create v1.0.0 - Initial Release
+        create_v1_0_0(path)?;
+        
+        // Create v1.1.0 - Feature Update
+        create_v1_1_0(path)?;
+    }
 
     let mut config = Config::default();
     config.navbar_logo = Some("verdocs-logo.png".to_string());
