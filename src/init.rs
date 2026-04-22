@@ -15,9 +15,9 @@ pub fn init_project(path: &PathBuf) -> Result<()> {
     fs::create_dir_all(path.join("assets"))?;
     fs::create_dir_all(path.join("search-index"))?;
 
-    // Embed and write the sample image
-    let sample_image = include_bytes!("../resources/sample-image.png");
-    fs::write(path.join("assets/verdocs-logo.png"), sample_image)?;
+    // Embed and write the logo
+    let logo = include_bytes!("../resources/verdocs-logo.png");
+    fs::write(path.join("assets/verdocs-logo.png"), logo)?;
 
     // Create v1.0.0 - Initial Release
     create_v1_0_0(path)?;

@@ -3,6 +3,7 @@ use std::path::PathBuf;
 
 #[derive(Parser)]
 #[command(name = "verdocs")]
+#[command(version)]
 #[command(about = "A static documentation site generator with versioning support", long_about = None)]
 pub struct Cli {
     #[command(subcommand)]

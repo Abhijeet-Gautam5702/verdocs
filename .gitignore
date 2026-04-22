@@ -33,6 +33,6 @@ search-index
 assets
 test-docs
 config.yml
-v*/
+# v*/
 
 todo.md
