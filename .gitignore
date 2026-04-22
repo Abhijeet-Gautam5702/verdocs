@@ -29,10 +29,10 @@ target
 context
 
 out
-search-index
-assets
+# search-index
+# assets
 test-docs
-config.yml
+# config.yml
 # v*/
 
 todo.md
