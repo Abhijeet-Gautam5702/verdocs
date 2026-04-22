@@ -43,6 +43,4 @@ Visit `http://localhost:8080` to see your documentation in real-time.
 
 ## Documentation
 
-For detailed information on how to use Verdocs, including installation, core concepts, and deployment strategies, please visit our official documentation site:
-
-**[https://abhijeet-gautam5702.github.io/verdocs/](https://abhijeet-gautam5702.github.io/verdocs/)**
+For detailed information on how to use Verdocs, including installation, core concepts, and deployment strategies, please visit the [documentation site](https://abhijeet-gautam5702.github.io/verdocs/)
