@@ -154,12 +154,12 @@ if [[ "$INSTALLATION_SUCCESS" == "true" && "$IS_NEW_INSTALL" == "true" && -z "$D
         fi
 
         USER_ID=$(cat "$UID_FILE")
-        
+
         curl -s -X POST "$POSTHOG_API_HOST/capture/" \
             -H "Content-Type: application/json" \
             -d "{
                 \"api_key\": \"$POSTHOG_PROJECT_KEY\",
-                \"event\": \"install_completed\",
+                \"event\": \"verdocs_install_completed\",
                 \"distinct_id\": \"$USER_ID\",
                 \"properties\": {
                     \"os\": \"$OS\",
