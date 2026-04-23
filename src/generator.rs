@@ -790,11 +790,7 @@ fn wrap_html(
         String::new()
     };
 
-    let main_content_style = if has_toc {
-        "margin-right: var(--minimap-width);"
-    } else {
-        "margin-right: 0;"
-    };
+    let main_content_style = "";
 
     let minimap_html = if has_toc {
         format!(
@@ -867,6 +863,7 @@ fn wrap_html(
 <html style="scroll-padding-top: 80px;">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{}</title>
     {}
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
@@ -876,6 +873,7 @@ fn wrap_html(
             --sidebar-width: 260px;
             --minimap-width: 240px;
             --navbar-height: 60px;
+            --content-max-width: 1500px;
         }}
 
         @media (prefers-color-scheme: dark) {{
@@ -888,65 +886,117 @@ fn wrap_html(
         body {{
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
             margin: 0;
-            display: flex;
             background: var(--bg-color);
             color: var(--text-color);
             height: 100vh;
             overflow: hidden;
+            display: flex;
+            flex-direction: column;
         }}
 
         #navbar {{
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
             height: var(--navbar-height);
             background: var(--navbar-bg);
             border-bottom: 1px solid var(--border-color);
+            flex-shrink: 0;
+            z-index: 1000;
+        }}
+
+        .navbar-container {{
+            max-width: var(--content-max-width);
+            margin: 0 auto;
+            height: 100%;
             display: flex;
             align-items: center;
             justify-content: space-between;
             padding: 0 40px;
-            z-index: 1000;
+        }}
+
+        #main-wrapper {{
+            display: flex;
+            flex-grow: 1;
+            overflow: hidden;
+            max-width: var(--content-max-width);
+            margin: 0 auto;
+            width: 100%;
+            position: relative;
         }}
 
         #sidebar {{
             width: var(--sidebar-width);
-            height: calc(100vh - var(--navbar-height));
-            position: fixed;
-            left: 0;
-            top: var(--navbar-height);
-            border-right: 1px solid var(--border-color);
+            height: 100%;
             background: var(--sidebar-bg);
+            border-right: 1px solid var(--border-color);
             overflow-y: auto;
             padding: 20px 0;
             box-sizing: border-box;
+            flex-shrink: 0;
         }}
 
         #minimap {{
             width: var(--minimap-width);
-            height: calc(100vh - var(--navbar-height));
-            position: fixed;
-            right: 0;
-            top: var(--navbar-height);
-            border-left: 1px solid var(--border-color);
+            height: 100%;
             background: var(--sidebar-bg);
+            border-left: 1px solid var(--border-color);
             overflow-y: auto;
             padding: 60px 20px 20px 20px;
             box-sizing: border-box;
+            flex-shrink: 0;
         }}
 
         #main-content {{
-            margin-left: var(--sidebar-width);
-            {}
             padding: 2rem 4rem 10rem 4rem;
             flex-grow: 1;
-            margin-top: var(--navbar-height);
+            {}
             max-width: 1000px;
             position: relative;
-            height: calc(100vh - var(--navbar-height));
+            height: 100%;
             overflow-y: auto;
             box-sizing: border-box;
+        }}
+
+        #mobile-menu-toggle {{
+            display: none;
+            cursor: pointer;
+            margin-right: 15px;
+            color: var(--text-color);
+        }}
+        #mobile-menu-toggle svg {{
+            width: 24px;
+            height: 24px;
+        }}
+
+        #sidebar-overlay {{
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1001;
+        }}
+
+        @media (max-width: 1024px) {{
+            #mobile-menu-toggle {{ display: block; }}
+            #sidebar {{
+                position: fixed;
+                left: 0;
+                top: 0;
+                bottom: 0;
+                z-index: 1002;
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+                height: 100vh;
+            }}
+            #sidebar.open {{ transform: translateX(0); }}
+            #minimap {{ display: none; }}
+            #main-content {{
+                padding: 2rem 1.5rem;
+                max-width: 100%;
+            }}
+            #sidebar-overlay.visible {{ display: block; }}
+            .navbar-container {{ padding: 0 20px; }}
         }}
 
         #search-bar-trigger {{
@@ -1212,6 +1262,13 @@ fn wrap_html(
         const savedTheme = localStorage.getItem('verdocs-theme') || 'system';
         setTheme(savedTheme);
 
+        function toggleSidebar() {{
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+            sidebar.classList.toggle('open');
+            overlay.classList.toggle('visible');
+        }}
+
         setInterval(() => {{
             if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {{
                 fetch(window.__verdocs_base_path + '/__verdocs/status')
@@ -1369,6 +1426,19 @@ fn wrap_html(
                     }});
                 }};
             }});
+
+            // 4. Close sidebar on mobile when a link is clicked
+            document.querySelectorAll('.sidebar-item').forEach(item => {{
+                item.addEventListener('click', () => {{
+                    if (window.innerWidth <= 1024) {{
+                        const sidebar = document.getElementById('sidebar');
+                        const overlay = document.getElementById('sidebar-overlay');
+                        if (sidebar.classList.contains('open')) {{
+                            toggleSidebar();
+                        }}
+                    }}
+                }});
+            }});
         }});
     </script>
 </head>
@@ -1382,29 +1452,37 @@ fn wrap_html(
         </div>
     </div>
     <div id="navbar">
-        <div id="navbar-left">
-            {}
+        <div class="navbar-container">
+            <div id="navbar-left" style="display: flex; align-items: center;">
+                <div id="mobile-menu-toggle" onclick="toggleSidebar()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+                </div>
+                {}
+            </div>
+            <div id="navbar-right" style="display: flex; align-items: center;">
+                <div id="search-bar-trigger" onclick="openSearch()">
+                    <span>Search...</span>
+                    <span style="font-size: 11px; color: #bbb;">⌘K</span>
+                </div>
+                {}
+            </div>
         </div>
-        <div id="navbar-right" style="display: flex; align-items: center;">
-            <div id="search-bar-trigger" onclick="openSearch()">
-                <span>Search...</span>
-                <span style="font-size: 11px; color: #bbb;">⌘K</span>
+    </div>
+    <div id="main-wrapper">
+        <div id="sidebar">
+            <div id="version-selector-container">
+                <select onchange="switchVersion(this.value)">
+                    {}
+                </select>
             </div>
             {}
         </div>
-    </div>
-    <div id="sidebar">
-        <div id="version-selector-container">
-            <select onchange="switchVersion(this.value)">
-                {}
-            </select>
+        <div id="main-content">
+            {}
         </div>
         {}
     </div>
-    <div id="main-content">
-        {}
-    </div>
-    {}
+    <div id="sidebar-overlay" onclick="toggleSidebar()"></div>
 </body>
 </html>"##,
         config.title,

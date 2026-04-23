@@ -102,11 +102,12 @@ fn render_404(path: &str) -> String {
 <html>
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>404 - Not Found</title>
     <style>
-        body {{ font-family: -apple-system, sans-serif; padding: 4rem; text-align: center; color: #333; }}
-        h1 {{ font-size: 3rem; margin-bottom: 1rem; }}
-        p {{ font-size: 1.2rem; color: #666; }}
+        body {{ font-family: -apple-system, sans-serif; padding: 2rem; text-align: center; color: #333; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 80vh; }}
+        h1 {{ font-size: clamp(3rem, 10vw, 5rem); margin-bottom: 1rem; }}
+        p {{ font-size: 1.2rem; color: #666; max-width: 600px; line-height: 1.6; }}
         .home-link {{ display: inline-block; margin-top: 2rem; color: #007bff; text-decoration: none; font-weight: bold; }}
     </style>
 </head>

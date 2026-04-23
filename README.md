@@ -1,4 +1,4 @@
-# verdocs ![Version](https://img.shields.io/badge/Version-0.1.0-blue.svg)
+# verdocs ![Version](https://img.shields.io/badge/Version-0.2.0-blue.svg)
 
 ![Banner](./resources/verdocs-logo-with-name.jpeg)
 
@@ -44,3 +44,8 @@ Visit `http://localhost:8080` to see your documentation in real-time.
 ## Documentation
 
 For detailed information on how to use Verdocs, including installation, core concepts, and deployment strategies, please visit the [documentation site](https://abhijeet-gautam5702.github.io/verdocs/)
+
+---
+
+## Changelog
+Detailed changes for each release are documented in [CHANGELOG](CHANGELOG.md).
