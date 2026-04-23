@@ -2,86 +2,140 @@
 <html style="scroll-padding-top: 80px;">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Verdocs</title>
     <link rel="icon" href="/verdocs/assets/verdocs-logo.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
     <style>
         :root {
-            --primary-color: #007bff; --bg-color: #ffffff; --text-color: #333333; --navbar-bg: #ffffff; --sidebar-bg: #fcfcfc; --border-color: #eeeeee; --code-bg: #f1f1f1; --search-bg: #f3f4f6; --search-border: #e5e7eb; --search-text: #6b7280; --h-color: #222; --sidebar-item-color: #555; --toc-item-color: #777; --modal-bg: #ffffff;--color-tip: #28a745;--bg-color-tip: rgba(40, 167, 69, 0.1);--color-warn: #ffc107;--bg-color-warn: rgba(255, 193, 7, 0.1);--color-note: #17a2b8;--bg-color-note: rgba(23, 162, 184, 0.1);--color-danger: #dc3545;--bg-color-danger: rgba(220, 53, 69, 0.1);--color-error: #bd2130;--bg-color-error: rgba(189, 33, 48, 0.1);--color-important: #fd7e14;--bg-color-important: rgba(253, 126, 20, 0.1);
+            --primary-color: #007bff; --bg-color: #ffffff; --text-color: #333333; --navbar-bg: #ffffff; --sidebar-bg: #fcfcfc; --border-color: #eeeeee; --code-bg: #f1f1f1; --search-bg: #f3f4f6; --search-border: #e5e7eb; --search-text: #6b7280; --h-color: #222; --sidebar-item-color: #555; --toc-item-color: #777; --modal-bg: #ffffff;--color-important: #fd7e14;--bg-color-important: rgba(253, 126, 20, 0.1);--color-note: #17a2b8;--bg-color-note: rgba(23, 162, 184, 0.1);--color-error: #bd2130;--bg-color-error: rgba(189, 33, 48, 0.1);--color-tip: #28a745;--bg-color-tip: rgba(40, 167, 69, 0.1);--color-danger: #dc3545;--bg-color-danger: rgba(220, 53, 69, 0.1);--color-warn: #ffc107;--bg-color-warn: rgba(255, 193, 7, 0.1);
             --sidebar-width: 260px;
             --minimap-width: 240px;
             --navbar-height: 60px;
+            --content-max-width: 1500px;
         }
 
         @media (prefers-color-scheme: dark) {
-            :root { --primary-color: #007bff; --bg-color: #0d1117; --text-color: #c9d1d9; --navbar-bg: #161b22; --sidebar-bg: #0d1117; --border-color: #30363d; --code-bg: #21262d; --search-bg: #21262d; --search-border: #30363d; --search-text: #8b949e; --h-color: #e6edf3; --sidebar-item-color: #8b949e; --toc-item-color: #7d8590; --modal-bg: #161b22;--color-danger: #f85149;--bg-color-danger: rgba(248, 81, 73, 0.1);--color-tip: #2ea043;--bg-color-tip: rgba(46, 160, 67, 0.1);--color-important: #db6d28;--bg-color-important: rgba(219, 109, 40, 0.1);--color-warn: #d29922;--bg-color-warn: rgba(210, 153, 34, 0.1);--color-error: #da3633;--bg-color-error: rgba(218, 54, 51, 0.1);--color-note: #388bfd;--bg-color-note: rgba(56, 139, 253, 0.1); }
+            :root { --primary-color: #007bff; --bg-color: #0d1117; --text-color: #c9d1d9; --navbar-bg: #161b22; --sidebar-bg: #0d1117; --border-color: #30363d; --code-bg: #21262d; --search-bg: #21262d; --search-border: #30363d; --search-text: #8b949e; --h-color: #e6edf3; --sidebar-item-color: #8b949e; --toc-item-color: #7d8590; --modal-bg: #161b22;--color-tip: #2ea043;--bg-color-tip: rgba(46, 160, 67, 0.1);--color-important: #db6d28;--bg-color-important: rgba(219, 109, 40, 0.1);--color-note: #388bfd;--bg-color-note: rgba(56, 139, 253, 0.1);--color-danger: #f85149;--bg-color-danger: rgba(248, 81, 73, 0.1);--color-warn: #d29922;--bg-color-warn: rgba(210, 153, 34, 0.1);--color-error: #da3633;--bg-color-error: rgba(218, 54, 51, 0.1); }
         }
 
-        [data-theme='light'] { --primary-color: #007bff; --bg-color: #ffffff; --text-color: #333333; --navbar-bg: #ffffff; --sidebar-bg: #fcfcfc; --border-color: #eeeeee; --code-bg: #f1f1f1; --search-bg: #f3f4f6; --search-border: #e5e7eb; --search-text: #6b7280; --h-color: #222; --sidebar-item-color: #555; --toc-item-color: #777; --modal-bg: #ffffff;--color-tip: #28a745;--bg-color-tip: rgba(40, 167, 69, 0.1);--color-warn: #ffc107;--bg-color-warn: rgba(255, 193, 7, 0.1);--color-note: #17a2b8;--bg-color-note: rgba(23, 162, 184, 0.1);--color-danger: #dc3545;--bg-color-danger: rgba(220, 53, 69, 0.1);--color-error: #bd2130;--bg-color-error: rgba(189, 33, 48, 0.1);--color-important: #fd7e14;--bg-color-important: rgba(253, 126, 20, 0.1); }
-        [data-theme='dark'] { --primary-color: #007bff; --bg-color: #0d1117; --text-color: #c9d1d9; --navbar-bg: #161b22; --sidebar-bg: #0d1117; --border-color: #30363d; --code-bg: #21262d; --search-bg: #21262d; --search-border: #30363d; --search-text: #8b949e; --h-color: #e6edf3; --sidebar-item-color: #8b949e; --toc-item-color: #7d8590; --modal-bg: #161b22;--color-danger: #f85149;--bg-color-danger: rgba(248, 81, 73, 0.1);--color-tip: #2ea043;--bg-color-tip: rgba(46, 160, 67, 0.1);--color-important: #db6d28;--bg-color-important: rgba(219, 109, 40, 0.1);--color-warn: #d29922;--bg-color-warn: rgba(210, 153, 34, 0.1);--color-error: #da3633;--bg-color-error: rgba(218, 54, 51, 0.1);--color-note: #388bfd;--bg-color-note: rgba(56, 139, 253, 0.1); }
+        [data-theme='light'] { --primary-color: #007bff; --bg-color: #ffffff; --text-color: #333333; --navbar-bg: #ffffff; --sidebar-bg: #fcfcfc; --border-color: #eeeeee; --code-bg: #f1f1f1; --search-bg: #f3f4f6; --search-border: #e5e7eb; --search-text: #6b7280; --h-color: #222; --sidebar-item-color: #555; --toc-item-color: #777; --modal-bg: #ffffff;--color-important: #fd7e14;--bg-color-important: rgba(253, 126, 20, 0.1);--color-note: #17a2b8;--bg-color-note: rgba(23, 162, 184, 0.1);--color-error: #bd2130;--bg-color-error: rgba(189, 33, 48, 0.1);--color-tip: #28a745;--bg-color-tip: rgba(40, 167, 69, 0.1);--color-danger: #dc3545;--bg-color-danger: rgba(220, 53, 69, 0.1);--color-warn: #ffc107;--bg-color-warn: rgba(255, 193, 7, 0.1); }
+        [data-theme='dark'] { --primary-color: #007bff; --bg-color: #0d1117; --text-color: #c9d1d9; --navbar-bg: #161b22; --sidebar-bg: #0d1117; --border-color: #30363d; --code-bg: #21262d; --search-bg: #21262d; --search-border: #30363d; --search-text: #8b949e; --h-color: #e6edf3; --sidebar-item-color: #8b949e; --toc-item-color: #7d8590; --modal-bg: #161b22;--color-tip: #2ea043;--bg-color-tip: rgba(46, 160, 67, 0.1);--color-important: #db6d28;--bg-color-important: rgba(219, 109, 40, 0.1);--color-note: #388bfd;--bg-color-note: rgba(56, 139, 253, 0.1);--color-danger: #f85149;--bg-color-danger: rgba(248, 81, 73, 0.1);--color-warn: #d29922;--bg-color-warn: rgba(210, 153, 34, 0.1);--color-error: #da3633;--bg-color-error: rgba(218, 54, 51, 0.1); }
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
             margin: 0;
-            display: flex;
             background: var(--bg-color);
             color: var(--text-color);
             height: 100vh;
             overflow: hidden;
+            display: flex;
+            flex-direction: column;
         }
 
         #navbar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
             height: var(--navbar-height);
             background: var(--navbar-bg);
             border-bottom: 1px solid var(--border-color);
+            flex-shrink: 0;
+            z-index: 1000;
+        }
+
+        .navbar-container {
+            max-width: var(--content-max-width);
+            margin: 0 auto;
+            height: 100%;
             display: flex;
             align-items: center;
             justify-content: space-between;
             padding: 0 40px;
-            z-index: 1000;
+        }
+
+        #main-wrapper {
+            display: flex;
+            flex-grow: 1;
+            overflow: hidden;
+            max-width: var(--content-max-width);
+            margin: 0 auto;
+            width: 100%;
+            position: relative;
         }
 
         #sidebar {
             width: var(--sidebar-width);
-            height: calc(100vh - var(--navbar-height));
-            position: fixed;
-            left: 0;
-            top: var(--navbar-height);
-            border-right: 1px solid var(--border-color);
+            height: 100%;
             background: var(--sidebar-bg);
+            border-right: 1px solid var(--border-color);
             overflow-y: auto;
             padding: 20px 0;
             box-sizing: border-box;
+            flex-shrink: 0;
         }
 
         #minimap {
             width: var(--minimap-width);
-            height: calc(100vh - var(--navbar-height));
-            position: fixed;
-            right: 0;
-            top: var(--navbar-height);
-            border-left: 1px solid var(--border-color);
+            height: 100%;
             background: var(--sidebar-bg);
+            border-left: 1px solid var(--border-color);
             overflow-y: auto;
             padding: 60px 20px 20px 20px;
             box-sizing: border-box;
+            flex-shrink: 0;
         }
 
         #main-content {
-            margin-left: var(--sidebar-width);
-            margin-right: var(--minimap-width);
             padding: 2rem 4rem 10rem 4rem;
             flex-grow: 1;
-            margin-top: var(--navbar-height);
+            
             max-width: 1000px;
             position: relative;
-            height: calc(100vh - var(--navbar-height));
+            height: 100%;
             overflow-y: auto;
             box-sizing: border-box;
+        }
+
+        #mobile-menu-toggle {
+            display: none;
+            cursor: pointer;
+            margin-right: 15px;
+            color: var(--text-color);
+        }
+        #mobile-menu-toggle svg {
+            width: 24px;
+            height: 24px;
+        }
+
+        #sidebar-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1001;
+        }
+
+        @media (max-width: 1024px) {
+            #mobile-menu-toggle { display: block; }
+            #sidebar {
+                position: fixed;
+                left: 0;
+                top: 0;
+                bottom: 0;
+                z-index: 1002;
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+                height: 100vh;
+            }
+            #sidebar.open { transform: translateX(0); }
+            #minimap { display: none; }
+            #main-content {
+                padding: 2rem 1.5rem;
+                max-width: 100%;
+            }
+            #sidebar-overlay.visible { display: block; }
+            .navbar-container { padding: 0 20px; }
         }
 
         #search-bar-trigger {
@@ -306,6 +360,29 @@
             margin-bottom: 10px;
             font-weight: bold;
         }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+            font-size: 14px;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border: 1px solid var(--border-color);
+        }
+        th {
+            background: var(--search-bg);
+            font-weight: bold;
+            color: var(--h-color);
+        }
+        tr:nth-child(even) {
+            background: rgba(0, 0, 0, 0.02);
+        }
+        [data-theme='dark'] tr:nth-child(even) {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
         img {
             max-width: 100%;
             height: auto;
@@ -332,7 +409,7 @@
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
     <script>
-        window.__verdocs_version = "1776898675";
+        window.__verdocs_version = "1776952164";
         window.__verdocs_current_version_name = "v0.1.0";
         window.__verdocs_base_path = "/verdocs";
 
@@ -346,6 +423,13 @@
         }
         const savedTheme = localStorage.getItem('verdocs-theme') || 'system';
         setTheme(savedTheme);
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+            sidebar.classList.toggle('open');
+            overlay.classList.toggle('visible');
+        }
 
         setInterval(() => {
             if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
@@ -504,6 +588,19 @@
                     });
                 };
             });
+
+            // 4. Close sidebar on mobile when a link is clicked
+            document.querySelectorAll('.sidebar-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    if (window.innerWidth <= 1024) {
+                        const sidebar = document.getElementById('sidebar');
+                        const overlay = document.getElementById('sidebar-overlay');
+                        if (sidebar.classList.contains('open')) {
+                            toggleSidebar();
+                        }
+                    }
+                });
+            });
         });
     </script>
 </head>
@@ -517,15 +614,19 @@
         </div>
     </div>
     <div id="navbar">
-        <div id="navbar-left">
-            <img src="/verdocs/assets/verdocs-logo.png" alt="Logo" style="height: 32px; cursor: pointer;" onclick="window.location.href='/verdocs/v0.1.0/home'">
-        </div>
-        <div id="navbar-right" style="display: flex; align-items: center;">
-            <div id="search-bar-trigger" onclick="openSearch()">
-                <span>Search...</span>
-                <span style="font-size: 11px; color: #bbb;">⌘K</span>
+        <div class="navbar-container">
+            <div id="navbar-left" style="display: flex; align-items: center;">
+                <div id="mobile-menu-toggle" onclick="toggleSidebar()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+                </div>
+                <img src="/verdocs/assets/verdocs-logo.png" alt="Logo" style="height: 32px; cursor: pointer;" onclick="window.location.href='/verdocs/v0.1.0/home'">
             </div>
-            
+            <div id="navbar-right" style="display: flex; align-items: center;">
+                <div id="search-bar-trigger" onclick="openSearch()">
+                    <span>Search...</span>
+                    <span style="font-size: 11px; color: #bbb;">⌘K</span>
+                </div>
+                
         <div id="theme-toggle-container">
             <select id="theme-toggle" onchange="setTheme(this.value)">
                 <option value="system">System</option>
@@ -534,18 +635,21 @@
             </select>
         </div>
     
+            </div>
         </div>
     </div>
-    <div id="sidebar">
-        <div id="version-selector-container">
-            <select onchange="switchVersion(this.value)">
-                <option value="v0.1.0" selected>v0.1.0</option>
-            </select>
+    <div id="main-wrapper">
+        <div id="sidebar">
+            <div id="version-selector-container">
+                <select onchange="switchVersion(this.value)">
+                    <option value="v0.1.0" selected>v0.1.0</option>
+<option value="v0.2.0" >v0.2.0</option>
+                </select>
+            </div>
+            <a href="/verdocs/v0.1.0/home" class="sidebar-item " style="padding-left: 20px;">Home</a><a href="/verdocs/v0.1.0/command-line" class="sidebar-item " style="padding-left: 20px;">Command Line</a><a href="/verdocs/v0.1.0/core-concepts" class="sidebar-item " style="padding-left: 20px;">Core Concepts</a><div class="sidebar-group "><a href="/verdocs/v0.1.0/core-concepts/admonitions" class="sidebar-item " style="padding-left: 35px;">Admonitions</a><a href="/verdocs/v0.1.0/core-concepts/path-resolution" class="sidebar-item " style="padding-left: 35px;">Path Resolution</a><a href="/verdocs/v0.1.0/core-concepts/versions" class="sidebar-item " style="padding-left: 35px;">Versions</a></div><a href="/verdocs/v0.1.0/customisation" class="sidebar-item " style="padding-left: 20px;">Customisation</a><a href="/verdocs/v0.1.0/deployment" class="sidebar-item " style="padding-left: 20px;">Deployment</a><a href="/verdocs/v0.1.0/features" class="sidebar-item " style="padding-left: 20px;">Features</a><div class="sidebar-group expanded"><a href="/verdocs/v0.1.0/features/code-blocks" class="sidebar-item " style="padding-left: 35px;">Code Blocks</a><a href="/verdocs/v0.1.0/features/minimap" class="sidebar-item " style="padding-left: 35px;">Minimap</a><a href="/verdocs/v0.1.0/features/preview-server" class="sidebar-item active" style="padding-left: 35px;">Preview Server</a><a href="/verdocs/v0.1.0/features/search" class="sidebar-item " style="padding-left: 35px;">Search</a><a href="/verdocs/v0.1.0/features/sidebar" class="sidebar-item " style="padding-left: 35px;">Sidebar</a></div><a href="/verdocs/v0.1.0/project-requirements" class="sidebar-item " style="padding-left: 20px;">Project Requirements</a><a href="/verdocs/v0.1.0/quick-start" class="sidebar-item " style="padding-left: 20px;">Quick Start</a>
         </div>
-        <a href="/verdocs/v0.1.0/home" class="sidebar-item " style="padding-left: 20px;">Home</a><a href="/verdocs/v0.1.0/command-line" class="sidebar-item " style="padding-left: 20px;">Command Line</a><a href="/verdocs/v0.1.0/core-concepts" class="sidebar-item " style="padding-left: 20px;">Core Concepts</a><div class="sidebar-group "><a href="/verdocs/v0.1.0/core-concepts/admonitions" class="sidebar-item " style="padding-left: 35px;">Admonitions</a><a href="/verdocs/v0.1.0/core-concepts/path-resolution" class="sidebar-item " style="padding-left: 35px;">Path Resolution</a><a href="/verdocs/v0.1.0/core-concepts/versions" class="sidebar-item " style="padding-left: 35px;">Versions</a></div><a href="/verdocs/v0.1.0/customisation" class="sidebar-item " style="padding-left: 20px;">Customisation</a><a href="/verdocs/v0.1.0/deployment" class="sidebar-item " style="padding-left: 20px;">Deployment</a><a href="/verdocs/v0.1.0/features" class="sidebar-item " style="padding-left: 20px;">Features</a><div class="sidebar-group expanded"><a href="/verdocs/v0.1.0/features/code-blocks" class="sidebar-item " style="padding-left: 35px;">Code Blocks</a><a href="/verdocs/v0.1.0/features/minimap" class="sidebar-item " style="padding-left: 35px;">Minimap</a><a href="/verdocs/v0.1.0/features/preview-server" class="sidebar-item active" style="padding-left: 35px;">Preview Server</a><a href="/verdocs/v0.1.0/features/search" class="sidebar-item " style="padding-left: 35px;">Search</a><a href="/verdocs/v0.1.0/features/sidebar" class="sidebar-item " style="padding-left: 35px;">Sidebar</a></div><a href="/verdocs/v0.1.0/project-requirements" class="sidebar-item " style="padding-left: 20px;">Project Requirements</a><a href="/verdocs/v0.1.0/quick-start" class="sidebar-item " style="padding-left: 20px;">Quick Start</a>
-    </div>
-    <div id="main-content">
-        <h1>Preview Server Internals (Hot Reloading)</h1>
+        <div id="main-content">
+            <h1>Preview Server Internals (Hot Reloading)</h1>
 <p>The Verdocs preview server is designed for a seamless developer experience, allowing you to see your changes in real-time as you write.</p>
 <h2 id="how-it-works">How it Works</h2>
 <p>When you run <code>verdocs preview</code>, Verdocs starts a local development server with a built-in file watcher and hot-reloading capability.</p>
@@ -570,12 +674,14 @@
 Unlike many other hot-reloading systems, Verdocs uses a polling strategy instead of WebSockets. This makes it more robust in environments like remote development (over SSH) or within certain containerized setups where WebSockets may be blocked or unstable.
 </div></p>
 
-    </div>
-    <div id="minimap">
+        </div>
+        <div id="minimap">
         <div class="toc-title">On this page</div>
         <a href="#how-it-works" class="toc-item" style="padding-left: 0px;">How it Works</a>
 <a href="#usage" class="toc-item" style="padding-left: 0px;">Usage</a>
 <a href="#troubleshooting" class="toc-item" style="padding-left: 0px;">Troubleshooting</a>
     </div>
+    </div>
+    <div id="sidebar-overlay" onclick="toggleSidebar()"></div>
 </body>
 </html>

@@ -410,7 +410,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
     <script>
         window.__verdocs_version = "1776952164";
-        window.__verdocs_current_version_name = "v0.1.0";
+        window.__verdocs_current_version_name = "v0.2.0";
         window.__verdocs_base_path = "/verdocs";
 
         function setTheme(theme) {
@@ -619,7 +619,7 @@
                 <div id="mobile-menu-toggle" onclick="toggleSidebar()">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
                 </div>
-                <img src="/verdocs/assets/verdocs-logo.png" alt="Logo" style="height: 32px; cursor: pointer;" onclick="window.location.href='/verdocs/v0.1.0/home'">
+                <img src="/verdocs/assets/verdocs-logo.png" alt="Logo" style="height: 32px; cursor: pointer;" onclick="window.location.href='/verdocs/v0.2.0/home'">
             </div>
             <div id="navbar-right" style="display: flex; align-items: center;">
                 <div id="search-bar-trigger" onclick="openSearch()">
@@ -642,37 +642,50 @@
         <div id="sidebar">
             <div id="version-selector-container">
                 <select onchange="switchVersion(this.value)">
-                    <option value="v0.1.0" selected>v0.1.0</option>
-<option value="v0.2.0" >v0.2.0</option>
+                    <option value="v0.1.0" >v0.1.0</option>
+<option value="v0.2.0" selected>v0.2.0</option>
                 </select>
             </div>
-            <a href="/verdocs/v0.1.0/home" class="sidebar-item " style="padding-left: 20px;">Home</a><a href="/verdocs/v0.1.0/command-line" class="sidebar-item " style="padding-left: 20px;">Command Line</a><a href="/verdocs/v0.1.0/core-concepts" class="sidebar-item active" style="padding-left: 20px;">Core Concepts</a><div class="sidebar-group expanded"><a href="/verdocs/v0.1.0/core-concepts/admonitions" class="sidebar-item " style="padding-left: 35px;">Admonitions</a><a href="/verdocs/v0.1.0/core-concepts/path-resolution" class="sidebar-item " style="padding-left: 35px;">Path Resolution</a><a href="/verdocs/v0.1.0/core-concepts/versions" class="sidebar-item " style="padding-left: 35px;">Versions</a></div><a href="/verdocs/v0.1.0/customisation" class="sidebar-item " style="padding-left: 20px;">Customisation</a><a href="/verdocs/v0.1.0/deployment" class="sidebar-item " style="padding-left: 20px;">Deployment</a><a href="/verdocs/v0.1.0/features" class="sidebar-item " style="padding-left: 20px;">Features</a><div class="sidebar-group "><a href="/verdocs/v0.1.0/features/code-blocks" class="sidebar-item " style="padding-left: 35px;">Code Blocks</a><a href="/verdocs/v0.1.0/features/minimap" class="sidebar-item " style="padding-left: 35px;">Minimap</a><a href="/verdocs/v0.1.0/features/preview-server" class="sidebar-item " style="padding-left: 35px;">Preview Server</a><a href="/verdocs/v0.1.0/features/search" class="sidebar-item " style="padding-left: 35px;">Search</a><a href="/verdocs/v0.1.0/features/sidebar" class="sidebar-item " style="padding-left: 35px;">Sidebar</a></div><a href="/verdocs/v0.1.0/project-requirements" class="sidebar-item " style="padding-left: 20px;">Project Requirements</a><a href="/verdocs/v0.1.0/quick-start" class="sidebar-item " style="padding-left: 20px;">Quick Start</a>
+            <a href="/verdocs/v0.2.0/home" class="sidebar-item " style="padding-left: 20px;">Home</a><a href="/verdocs/v0.2.0/command-line" class="sidebar-item " style="padding-left: 20px;">Command Line</a><a href="/verdocs/v0.2.0/core-concepts" class="sidebar-item " style="padding-left: 20px;">Core Concepts</a><div class="sidebar-group "><a href="/verdocs/v0.2.0/core-concepts/admonitions" class="sidebar-item " style="padding-left: 35px;">Admonitions</a><a href="/verdocs/v0.2.0/core-concepts/path-resolution" class="sidebar-item " style="padding-left: 35px;">Path Resolution</a><a href="/verdocs/v0.2.0/core-concepts/versions" class="sidebar-item " style="padding-left: 35px;">Versions</a></div><a href="/verdocs/v0.2.0/customisation" class="sidebar-item " style="padding-left: 20px;">Customisation</a><a href="/verdocs/v0.2.0/deployment" class="sidebar-item " style="padding-left: 20px;">Deployment</a><a href="/verdocs/v0.2.0/features" class="sidebar-item " style="padding-left: 20px;">Features</a><div class="sidebar-group "><a href="/verdocs/v0.2.0/features/code-blocks" class="sidebar-item " style="padding-left: 35px;">Code Blocks</a><a href="/verdocs/v0.2.0/features/minimap" class="sidebar-item " style="padding-left: 35px;">Minimap</a><a href="/verdocs/v0.2.0/features/preview-server" class="sidebar-item " style="padding-left: 35px;">Preview Server</a><a href="/verdocs/v0.2.0/features/search" class="sidebar-item " style="padding-left: 35px;">Search</a><a href="/verdocs/v0.2.0/features/sidebar" class="sidebar-item " style="padding-left: 35px;">Sidebar</a></div><a href="/verdocs/v0.2.0/project-requirements" class="sidebar-item active" style="padding-left: 20px;">Project Requirements</a><a href="/verdocs/v0.2.0/quick-start" class="sidebar-item " style="padding-left: 20px;">Quick Start</a>
         </div>
         <div id="main-content">
-            <h1>Core Concepts</h1>
-<p>Verdocs is an opinionated documentation generator designed for performance and ease of use. To achieve this, it employs a few unique "grammar" rules and a strict project structure that ensures consistency across different versions of your documentation.</p>
-<h2 id="grammar-and-structure">Grammar and Structure</h2>
-<p>Unlike generic static site generators, Verdocs is specifically tuned for documentation. Its primary differentiators include:</p>
-<ol>
-<li><strong>Strict Versioning:</strong> Documentation isn't just a collection of files; it's a versioned history. The folder structure itself defines the available versions of your site.</li>
-<li><strong>Native Admonitions:</strong> Verdocs introduces a custom syntax for callouts (tips, warnings, etc.) that are rendered beautifully without external plugins.</li>
-<li><strong>Intelligent Path Resolution:</strong> It handles complex relative and global linking strategies, making it easy to move files without breaking links or image references.</li>
-<li><strong>Zero-Config Search:</strong> A client-side search index is automatically generated for every version, ensuring high-speed search functionality.</li>
-</ol>
-<h2 id="documentation-sections">Documentation Sections</h2>
-<p>Explore the core features of Verdocs in detail:</p>
-<table><thead><tr><th style="text-align: left">Section</th><th style="text-align: left">Description</th></tr></thead><tbody>
-<tr><td style="text-align: left"><a href="/verdocs/v0.1.0/project-requirements">Project Requirements</a></td><td style="text-align: left">Mandatory directory structure and file naming rules.</td></tr>
-<tr><td style="text-align: left"><a href="/verdocs/v0.1.0/core-concepts/admonitions">Admonitions</a></td><td style="text-align: left">How to use and customize color-coded callouts.</td></tr>
-<tr><td style="text-align: left"><a href="/verdocs/v0.1.0/core-concepts/path-resolution">Path Resolution</a></td><td style="text-align: left">Understanding relative and global (<code>@/</code>) linking.</td></tr>
-<tr><td style="text-align: left"><a href="/verdocs/v0.1.0/core-concepts/versions">Versions</a></td><td style="text-align: left">Naming conventions and managing multiple documentation versions.</td></tr>
-</tbody></table>
+            <h1>Project Requirements</h1>
+<p>To ensure that Verdocs can successfully generate your documentation site, your project must adhere to a specific directory structure and naming convention. Verdocs is opinionated about its architecture to provide optimal performance and versioning support.</p>
+<h2 id="1-directory-structure">1. Directory Structure</h2>
+<p>A Verdocs project is organized into three primary sections: global configuration, global assets, and versioned documentation folders.</p>
+<pre><code class="language-text">my-docs/
+├── assets/                 # MANDATORY: Global assets (images, logos, etc.)
+├── config.yml              # MANDATORY: Global site configuration
+└── v1.0.0/                 # MANDATORY: Versioned folder (must start with 'v')
+    ├── home/               # Subdirectory
+    │   └── home.md         # MANDATORY: Folder index file
+    └── getting-started/
+        └── getting-started.md
+</code></pre>
+<h2 id="2-mandatory-folder-index-files">2. Mandatory Folder Index Files</h2>
+<p>Verdocs strictly requires that every subdirectory within a versioned folder contains an "index" Markdown file. This file <strong>must</strong> have the exact same name as the folder it resides in.</p>
+<ul>
+<li><strong>Correct:</strong> <code>v1.0.0/api/api.md</code></li>
+<li><strong>Incorrect:</strong> <code>v1.0.0/api/index.md</code></li>
+</ul>
+<p>If a subdirectory is found without a matching <code>.md</code> file, the generator will return an error and stop the build process. This ensures that every navigation point in your sidebar has a corresponding landing page.</p>
+<h2 id="3-version-naming-rules">3. Version Naming Rules</h2>
+<p>Every folder at the root of your project that is intended to be a documentation version must follow these rules:</p>
+<ul>
+<li><strong>Prefix:</strong> The folder name must start with a lowercase 'v'.</li>
+<li><strong>Content:</strong> The folder must contain at least one Markdown file or subdirectory.</li>
+</ul>
+<p>Folders that do not start with 'v' (except for <code>assets</code>, <code>search-index</code>, and <code>out</code>) will be ignored by the generator.</p>
+<h2 id="4-assets-directory">4. Assets Directory</h2>
+<p>The <code>assets/</code> directory at the root is reserved for all static files. These files are automatically copied to the production build and are globally accessible across all versions of your documentation. Refer to the <a href="/verdocs/v0.2.0/core-concepts/path-resolution">Path Resolution Guide</a> for details on how to link these assets.</p>
 
         </div>
         <div id="minimap">
         <div class="toc-title">On this page</div>
-        <a href="#grammar-and-structure" class="toc-item" style="padding-left: 0px;">Grammar and Structure</a>
-<a href="#documentation-sections" class="toc-item" style="padding-left: 0px;">Documentation Sections</a>
+        <a href="#1-directory-structure" class="toc-item" style="padding-left: 0px;">1. Directory Structure</a>
+<a href="#2-mandatory-folder-index-files" class="toc-item" style="padding-left: 0px;">2. Mandatory Folder Index Files</a>
+<a href="#3-version-naming-rules" class="toc-item" style="padding-left: 0px;">3. Version Naming Rules</a>
+<a href="#4-assets-directory" class="toc-item" style="padding-left: 0px;">4. Assets Directory</a>
     </div>
     </div>
     <div id="sidebar-overlay" onclick="toggleSidebar()"></div>

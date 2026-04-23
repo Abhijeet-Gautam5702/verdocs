@@ -410,7 +410,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
     <script>
         window.__verdocs_version = "1776952164";
-        window.__verdocs_current_version_name = "v0.1.0";
+        window.__verdocs_current_version_name = "v0.2.0";
         window.__verdocs_base_path = "/verdocs";
 
         function setTheme(theme) {
@@ -619,7 +619,7 @@
                 <div id="mobile-menu-toggle" onclick="toggleSidebar()">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
                 </div>
-                <img src="/verdocs/assets/verdocs-logo.png" alt="Logo" style="height: 32px; cursor: pointer;" onclick="window.location.href='/verdocs/v0.1.0/home'">
+                <img src="/verdocs/assets/verdocs-logo.png" alt="Logo" style="height: 32px; cursor: pointer;" onclick="window.location.href='/verdocs/v0.2.0/home'">
             </div>
             <div id="navbar-right" style="display: flex; align-items: center;">
                 <div id="search-bar-trigger" onclick="openSearch()">
@@ -642,37 +642,98 @@
         <div id="sidebar">
             <div id="version-selector-container">
                 <select onchange="switchVersion(this.value)">
-                    <option value="v0.1.0" selected>v0.1.0</option>
-<option value="v0.2.0" >v0.2.0</option>
+                    <option value="v0.1.0" >v0.1.0</option>
+<option value="v0.2.0" selected>v0.2.0</option>
                 </select>
             </div>
-            <a href="/verdocs/v0.1.0/home" class="sidebar-item " style="padding-left: 20px;">Home</a><a href="/verdocs/v0.1.0/command-line" class="sidebar-item " style="padding-left: 20px;">Command Line</a><a href="/verdocs/v0.1.0/core-concepts" class="sidebar-item active" style="padding-left: 20px;">Core Concepts</a><div class="sidebar-group expanded"><a href="/verdocs/v0.1.0/core-concepts/admonitions" class="sidebar-item " style="padding-left: 35px;">Admonitions</a><a href="/verdocs/v0.1.0/core-concepts/path-resolution" class="sidebar-item " style="padding-left: 35px;">Path Resolution</a><a href="/verdocs/v0.1.0/core-concepts/versions" class="sidebar-item " style="padding-left: 35px;">Versions</a></div><a href="/verdocs/v0.1.0/customisation" class="sidebar-item " style="padding-left: 20px;">Customisation</a><a href="/verdocs/v0.1.0/deployment" class="sidebar-item " style="padding-left: 20px;">Deployment</a><a href="/verdocs/v0.1.0/features" class="sidebar-item " style="padding-left: 20px;">Features</a><div class="sidebar-group "><a href="/verdocs/v0.1.0/features/code-blocks" class="sidebar-item " style="padding-left: 35px;">Code Blocks</a><a href="/verdocs/v0.1.0/features/minimap" class="sidebar-item " style="padding-left: 35px;">Minimap</a><a href="/verdocs/v0.1.0/features/preview-server" class="sidebar-item " style="padding-left: 35px;">Preview Server</a><a href="/verdocs/v0.1.0/features/search" class="sidebar-item " style="padding-left: 35px;">Search</a><a href="/verdocs/v0.1.0/features/sidebar" class="sidebar-item " style="padding-left: 35px;">Sidebar</a></div><a href="/verdocs/v0.1.0/project-requirements" class="sidebar-item " style="padding-left: 20px;">Project Requirements</a><a href="/verdocs/v0.1.0/quick-start" class="sidebar-item " style="padding-left: 20px;">Quick Start</a>
+            <a href="/verdocs/v0.2.0/home" class="sidebar-item " style="padding-left: 20px;">Home</a><a href="/verdocs/v0.2.0/command-line" class="sidebar-item " style="padding-left: 20px;">Command Line</a><a href="/verdocs/v0.2.0/core-concepts" class="sidebar-item " style="padding-left: 20px;">Core Concepts</a><div class="sidebar-group "><a href="/verdocs/v0.2.0/core-concepts/admonitions" class="sidebar-item " style="padding-left: 35px;">Admonitions</a><a href="/verdocs/v0.2.0/core-concepts/path-resolution" class="sidebar-item " style="padding-left: 35px;">Path Resolution</a><a href="/verdocs/v0.2.0/core-concepts/versions" class="sidebar-item " style="padding-left: 35px;">Versions</a></div><a href="/verdocs/v0.2.0/customisation" class="sidebar-item " style="padding-left: 20px;">Customisation</a><a href="/verdocs/v0.2.0/deployment" class="sidebar-item " style="padding-left: 20px;">Deployment</a><a href="/verdocs/v0.2.0/features" class="sidebar-item " style="padding-left: 20px;">Features</a><div class="sidebar-group "><a href="/verdocs/v0.2.0/features/code-blocks" class="sidebar-item " style="padding-left: 35px;">Code Blocks</a><a href="/verdocs/v0.2.0/features/minimap" class="sidebar-item " style="padding-left: 35px;">Minimap</a><a href="/verdocs/v0.2.0/features/preview-server" class="sidebar-item " style="padding-left: 35px;">Preview Server</a><a href="/verdocs/v0.2.0/features/search" class="sidebar-item " style="padding-left: 35px;">Search</a><a href="/verdocs/v0.2.0/features/sidebar" class="sidebar-item " style="padding-left: 35px;">Sidebar</a></div><a href="/verdocs/v0.2.0/project-requirements" class="sidebar-item " style="padding-left: 20px;">Project Requirements</a><a href="/verdocs/v0.2.0/quick-start" class="sidebar-item active" style="padding-left: 20px;">Quick Start</a>
         </div>
         <div id="main-content">
-            <h1>Core Concepts</h1>
-<p>Verdocs is an opinionated documentation generator designed for performance and ease of use. To achieve this, it employs a few unique "grammar" rules and a strict project structure that ensures consistency across different versions of your documentation.</p>
-<h2 id="grammar-and-structure">Grammar and Structure</h2>
-<p>Unlike generic static site generators, Verdocs is specifically tuned for documentation. Its primary differentiators include:</p>
-<ol>
-<li><strong>Strict Versioning:</strong> Documentation isn't just a collection of files; it's a versioned history. The folder structure itself defines the available versions of your site.</li>
-<li><strong>Native Admonitions:</strong> Verdocs introduces a custom syntax for callouts (tips, warnings, etc.) that are rendered beautifully without external plugins.</li>
-<li><strong>Intelligent Path Resolution:</strong> It handles complex relative and global linking strategies, making it easy to move files without breaking links or image references.</li>
-<li><strong>Zero-Config Search:</strong> A client-side search index is automatically generated for every version, ensuring high-speed search functionality.</li>
-</ol>
-<h2 id="documentation-sections">Documentation Sections</h2>
-<p>Explore the core features of Verdocs in detail:</p>
-<table><thead><tr><th style="text-align: left">Section</th><th style="text-align: left">Description</th></tr></thead><tbody>
-<tr><td style="text-align: left"><a href="/verdocs/v0.1.0/project-requirements">Project Requirements</a></td><td style="text-align: left">Mandatory directory structure and file naming rules.</td></tr>
-<tr><td style="text-align: left"><a href="/verdocs/v0.1.0/core-concepts/admonitions">Admonitions</a></td><td style="text-align: left">How to use and customize color-coded callouts.</td></tr>
-<tr><td style="text-align: left"><a href="/verdocs/v0.1.0/core-concepts/path-resolution">Path Resolution</a></td><td style="text-align: left">Understanding relative and global (<code>@/</code>) linking.</td></tr>
-<tr><td style="text-align: left"><a href="/verdocs/v0.1.0/core-concepts/versions">Versions</a></td><td style="text-align: left">Naming conventions and managing multiple documentation versions.</td></tr>
-</tbody></table>
+            <h1>Quick Start Guide</h1>
+<p>This guide will walk you through installing Verdocs and deploying your first versioned documentation site.</p>
+<h2 id="1-installation">1. Installation</h2>
+<p>Install Verdocs using the official installer script:</p>
+<pre><code class="language-bash">curl -fsSL https://raw.githubusercontent.com/Abhijeet-Gautam5702/verdocs/main/scripts/install.sh | bash
+</code></pre>
+<h2 id="2-verify-installation">2. Verify Installation</h2>
+<p>After installation, verify that the <code>verdocs</code> binary is available in your PATH:</p>
+<pre><code class="language-bash"># Check version
+verdocs --version
+
+# View help
+verdocs --help
+
+# Locate the binary
+which verdocs
+</code></pre>
+<h2 id="3-initialize-your-project">3. Initialize Your Project</h2>
+<p>Create a new directory for your documentation and initialize it:</p>
+<pre><code class="language-bash">mkdir my-docs
+cd my-docs
+verdocs init
+</code></pre>
+<p>The <code>init</code> command generates a project skeleton with sample versioned content and a default configuration file.</p>
+<p><div class="admonition" style="padding: 10px 15px; margin-bottom: 15px; border-left: 5px solid var(--color-important); background-color: var(--bg-color-important); border-radius: 6px; color: inherit;"><div style="font-weight: bold; color: var(--color-important); margin-bottom: 5px;">Project Requirements</div>
+Before modifying your project, please review the <a href="/verdocs/v0.2.0/project-requirements">Project Requirements</a> to understand the mandatory directory structure and file naming rules.
+</div></p>
+<h2 id="4-managing-versions">4. Managing Versions</h2>
+<p>By default, Verdocs initializes with sample versioned folders. You should rename or create folders following the Semantic Versioning format (e.g., <code>v1.0.0</code>, <code>v2.0.0-beta</code>).</p>
+<p><div class="admonition" style="padding: 10px 15px; margin-bottom: 15px; border-left: 5px solid var(--color-important); background-color: var(--bg-color-important); border-radius: 6px; color: inherit;">
+<strong>Note:</strong> Every versioned folder must start with a lowercase 'v' to be recognized by the generator.
+</div></p>
+<h2 id="5-assets-and-images">5. Assets and Images</h2>
+<p>Place all static assets, such as images, diagrams, and PDFs, in the <code>assets/</code> directory at the root of your project.</p>
+<h3 id="referencing-images">Referencing Images</h3>
+<p>You can reference images in your Markdown files using two strategies:</p>
+<ul>
+<li><strong>Relative Paths:</strong> <code>../../assets/logo.png</code></li>
+<li><strong>Verdocs Absolute Path:</strong> <code>assets/logo.png</code> (Verdocs will automatically resolve this relative to the site root).</li>
+</ul>
+<h2 id="6-configuration">6. Configuration</h2>
+<p>Edit the <code>config.yml</code> file in your project root to customize your website. This file controls:</p>
+<ul>
+<li><strong>Metadata:</strong> Website title, description, and favicon.</li>
+<li><strong>Branding:</strong> Navbar logo and primary theme colors.</li>
+<li><strong>Theming:</strong> Custom colors for different admonition types (Tip, Note, Warning, etc.).</li>
+</ul>
+<h2 id="7-preview-and-live-development">7. Preview and Live Development</h2>
+<p>Start the development server to preview your changes in real-time:</p>
+<pre><code class="language-bash">verdocs preview
+</code></pre>
+<p>The server will host your site locally (default: <code>http://localhost:8080/&lt;version&gt;</code>). Any changes saved to your Markdown files or configuration will trigger an instant reload in the browser.</p>
+<h2 id="8-links-and-redirections">8. Links and Redirections</h2>
+<p>Verdocs supports flexible linking between pages:</p>
+<ul>
+<li><strong>Relative Linking:</strong> <code>[Getting Started](./getting-started/getting-started.md)</code></li>
+<li><strong>Verdocs Absolute Linking:</strong> Use the <code>@/</code> prefix to reference paths relative to the current version root. For example, to link to <code>getting-started.md</code> from anywhere within the same version: <code>[Getting Started](@/getting-started/getting-started.md)</code>.</li>
+</ul>
+<h2 id="9-production-build">9. Production Build</h2>
+<p>Once your documentation is ready, generate a production-ready static build:</p>
+<pre><code class="language-bash">verdocs generate
+</code></pre>
+<p>This command creates an <code>out/</code> directory containing the optimized HTML, CSS, JavaScript, and search indices for your website.</p>
+<h2 id="10-deployment">10. Deployment</h2>
+<p>The contents of the <code>out/</code> directory are completely static. You can deploy them to any hosting provider, such as:</p>
+<ul>
+<li><strong>Vercel / Netlify:</strong> Push the <code>out/</code> folder or configure your build command.</li>
+<li><strong>GitHub Pages:</strong> Deploy the <code>out/</code> folder to a <code>gh-pages</code> branch.</li>
+<li><strong>Nginx/Apache:</strong> Copy the <code>out/</code> content to your web root.</li>
+</ul>
 
         </div>
         <div id="minimap">
         <div class="toc-title">On this page</div>
-        <a href="#grammar-and-structure" class="toc-item" style="padding-left: 0px;">Grammar and Structure</a>
-<a href="#documentation-sections" class="toc-item" style="padding-left: 0px;">Documentation Sections</a>
+        <a href="#1-installation" class="toc-item" style="padding-left: 0px;">1. Installation</a>
+<a href="#2-verify-installation" class="toc-item" style="padding-left: 0px;">2. Verify Installation</a>
+<a href="#3-initialize-your-project" class="toc-item" style="padding-left: 0px;">3. Initialize Your Project</a>
+<a href="#4-managing-versions" class="toc-item" style="padding-left: 0px;">4. Managing Versions</a>
+<a href="#5-assets-and-images" class="toc-item" style="padding-left: 0px;">5. Assets and Images</a>
+<a href="#referencing-images" class="toc-item" style="padding-left: 15px;">Referencing Images</a>
+<a href="#6-configuration" class="toc-item" style="padding-left: 0px;">6. Configuration</a>
+<a href="#7-preview-and-live-development" class="toc-item" style="padding-left: 0px;">7. Preview and Live Development</a>
+<a href="#8-links-and-redirections" class="toc-item" style="padding-left: 0px;">8. Links and Redirections</a>
+<a href="#9-production-build" class="toc-item" style="padding-left: 0px;">9. Production Build</a>
+<a href="#10-deployment" class="toc-item" style="padding-left: 0px;">10. Deployment</a>
     </div>
     </div>
     <div id="sidebar-overlay" onclick="toggleSidebar()"></div>

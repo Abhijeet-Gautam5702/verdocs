@@ -410,7 +410,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
     <script>
         window.__verdocs_version = "1776952164";
-        window.__verdocs_current_version_name = "v0.1.0";
+        window.__verdocs_current_version_name = "v0.2.0";
         window.__verdocs_base_path = "/verdocs";
 
         function setTheme(theme) {
@@ -619,7 +619,7 @@
                 <div id="mobile-menu-toggle" onclick="toggleSidebar()">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
                 </div>
-                <img src="/verdocs/assets/verdocs-logo.png" alt="Logo" style="height: 32px; cursor: pointer;" onclick="window.location.href='/verdocs/v0.1.0/home'">
+                <img src="/verdocs/assets/verdocs-logo.png" alt="Logo" style="height: 32px; cursor: pointer;" onclick="window.location.href='/verdocs/v0.2.0/home'">
             </div>
             <div id="navbar-right" style="display: flex; align-items: center;">
                 <div id="search-bar-trigger" onclick="openSearch()">
@@ -642,37 +642,105 @@
         <div id="sidebar">
             <div id="version-selector-container">
                 <select onchange="switchVersion(this.value)">
-                    <option value="v0.1.0" selected>v0.1.0</option>
-<option value="v0.2.0" >v0.2.0</option>
+                    <option value="v0.1.0" >v0.1.0</option>
+<option value="v0.2.0" selected>v0.2.0</option>
                 </select>
             </div>
-            <a href="/verdocs/v0.1.0/home" class="sidebar-item " style="padding-left: 20px;">Home</a><a href="/verdocs/v0.1.0/command-line" class="sidebar-item " style="padding-left: 20px;">Command Line</a><a href="/verdocs/v0.1.0/core-concepts" class="sidebar-item active" style="padding-left: 20px;">Core Concepts</a><div class="sidebar-group expanded"><a href="/verdocs/v0.1.0/core-concepts/admonitions" class="sidebar-item " style="padding-left: 35px;">Admonitions</a><a href="/verdocs/v0.1.0/core-concepts/path-resolution" class="sidebar-item " style="padding-left: 35px;">Path Resolution</a><a href="/verdocs/v0.1.0/core-concepts/versions" class="sidebar-item " style="padding-left: 35px;">Versions</a></div><a href="/verdocs/v0.1.0/customisation" class="sidebar-item " style="padding-left: 20px;">Customisation</a><a href="/verdocs/v0.1.0/deployment" class="sidebar-item " style="padding-left: 20px;">Deployment</a><a href="/verdocs/v0.1.0/features" class="sidebar-item " style="padding-left: 20px;">Features</a><div class="sidebar-group "><a href="/verdocs/v0.1.0/features/code-blocks" class="sidebar-item " style="padding-left: 35px;">Code Blocks</a><a href="/verdocs/v0.1.0/features/minimap" class="sidebar-item " style="padding-left: 35px;">Minimap</a><a href="/verdocs/v0.1.0/features/preview-server" class="sidebar-item " style="padding-left: 35px;">Preview Server</a><a href="/verdocs/v0.1.0/features/search" class="sidebar-item " style="padding-left: 35px;">Search</a><a href="/verdocs/v0.1.0/features/sidebar" class="sidebar-item " style="padding-left: 35px;">Sidebar</a></div><a href="/verdocs/v0.1.0/project-requirements" class="sidebar-item " style="padding-left: 20px;">Project Requirements</a><a href="/verdocs/v0.1.0/quick-start" class="sidebar-item " style="padding-left: 20px;">Quick Start</a>
+            <a href="/verdocs/v0.2.0/home" class="sidebar-item " style="padding-left: 20px;">Home</a><a href="/verdocs/v0.2.0/command-line" class="sidebar-item " style="padding-left: 20px;">Command Line</a><a href="/verdocs/v0.2.0/core-concepts" class="sidebar-item " style="padding-left: 20px;">Core Concepts</a><div class="sidebar-group "><a href="/verdocs/v0.2.0/core-concepts/admonitions" class="sidebar-item " style="padding-left: 35px;">Admonitions</a><a href="/verdocs/v0.2.0/core-concepts/path-resolution" class="sidebar-item " style="padding-left: 35px;">Path Resolution</a><a href="/verdocs/v0.2.0/core-concepts/versions" class="sidebar-item " style="padding-left: 35px;">Versions</a></div><a href="/verdocs/v0.2.0/customisation" class="sidebar-item active" style="padding-left: 20px;">Customisation</a><a href="/verdocs/v0.2.0/deployment" class="sidebar-item " style="padding-left: 20px;">Deployment</a><a href="/verdocs/v0.2.0/features" class="sidebar-item " style="padding-left: 20px;">Features</a><div class="sidebar-group "><a href="/verdocs/v0.2.0/features/code-blocks" class="sidebar-item " style="padding-left: 35px;">Code Blocks</a><a href="/verdocs/v0.2.0/features/minimap" class="sidebar-item " style="padding-left: 35px;">Minimap</a><a href="/verdocs/v0.2.0/features/preview-server" class="sidebar-item " style="padding-left: 35px;">Preview Server</a><a href="/verdocs/v0.2.0/features/search" class="sidebar-item " style="padding-left: 35px;">Search</a><a href="/verdocs/v0.2.0/features/sidebar" class="sidebar-item " style="padding-left: 35px;">Sidebar</a></div><a href="/verdocs/v0.2.0/project-requirements" class="sidebar-item " style="padding-left: 20px;">Project Requirements</a><a href="/verdocs/v0.2.0/quick-start" class="sidebar-item " style="padding-left: 20px;">Quick Start</a>
         </div>
         <div id="main-content">
-            <h1>Core Concepts</h1>
-<p>Verdocs is an opinionated documentation generator designed for performance and ease of use. To achieve this, it employs a few unique "grammar" rules and a strict project structure that ensures consistency across different versions of your documentation.</p>
-<h2 id="grammar-and-structure">Grammar and Structure</h2>
-<p>Unlike generic static site generators, Verdocs is specifically tuned for documentation. Its primary differentiators include:</p>
-<ol>
-<li><strong>Strict Versioning:</strong> Documentation isn't just a collection of files; it's a versioned history. The folder structure itself defines the available versions of your site.</li>
-<li><strong>Native Admonitions:</strong> Verdocs introduces a custom syntax for callouts (tips, warnings, etc.) that are rendered beautifully without external plugins.</li>
-<li><strong>Intelligent Path Resolution:</strong> It handles complex relative and global linking strategies, making it easy to move files without breaking links or image references.</li>
-<li><strong>Zero-Config Search:</strong> A client-side search index is automatically generated for every version, ensuring high-speed search functionality.</li>
-</ol>
-<h2 id="documentation-sections">Documentation Sections</h2>
-<p>Explore the core features of Verdocs in detail:</p>
-<table><thead><tr><th style="text-align: left">Section</th><th style="text-align: left">Description</th></tr></thead><tbody>
-<tr><td style="text-align: left"><a href="/verdocs/v0.1.0/project-requirements">Project Requirements</a></td><td style="text-align: left">Mandatory directory structure and file naming rules.</td></tr>
-<tr><td style="text-align: left"><a href="/verdocs/v0.1.0/core-concepts/admonitions">Admonitions</a></td><td style="text-align: left">How to use and customize color-coded callouts.</td></tr>
-<tr><td style="text-align: left"><a href="/verdocs/v0.1.0/core-concepts/path-resolution">Path Resolution</a></td><td style="text-align: left">Understanding relative and global (<code>@/</code>) linking.</td></tr>
-<tr><td style="text-align: left"><a href="/verdocs/v0.1.0/core-concepts/versions">Versions</a></td><td style="text-align: left">Naming conventions and managing multiple documentation versions.</td></tr>
+            <h1>Customisation Guide</h1>
+<p>Verdocs is designed to be highly flexible through a single configuration file: <code>config.yml</code>. This file, located at the root of your project, controls everything from website metadata to granular theme colors.</p>
+<h2 id="the-config-yml-structure">The <code>config.yml</code> Structure</h2>
+<p>The configuration is divided into four main sections: General Metadata, Hosting, Branding, and Theming.</p>
+<h3 id="1-general-metadata">1. General Metadata</h3>
+<p>These fields define the identity of your documentation site.</p>
+<table><thead><tr><th style="text-align: left">Field</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
+<tr><td style="text-align: left"><code>title</code></td><td style="text-align: left">String</td><td style="text-align: left">The name of your website. Appears in the browser tab and navbar.</td></tr>
+<tr><td style="text-align: left"><code>description</code></td><td style="text-align: left">String</td><td style="text-align: left">A brief description used for SEO and meta tags.</td></tr>
 </tbody></table>
+<p><strong>Example:</strong></p>
+<pre><code class="language-yaml">title: "Project Phoenix Docs"
+description: "The official technical documentation for Project Phoenix."
+</code></pre>
+<hr />
+<h3 id="2-subfolder-hosting">2. Subfolder Hosting</h3>
+<p>If you are not hosting your documentation at the root of a domain, you must configure the <code>base_path</code>.</p>
+<table><thead><tr><th style="text-align: left">Field</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
+<tr><td style="text-align: left"><code>base_path</code></td><td style="text-align: left">String</td><td style="text-align: left">The URL prefix for your site (e.g., <code>/verdocs/</code> for GitHub Pages). Defaults to <code>""</code>.</td></tr>
+</tbody></table>
+<p><strong>Example:</strong></p>
+<pre><code class="language-yaml">base_path: "/verdocs/"
+</code></pre>
+<p><div class="admonition" style="padding: 10px 15px; margin-bottom: 15px; border-left: 5px solid var(--color-important); background-color: var(--bg-color-important); border-radius: 6px; color: inherit;"><div style="font-weight: bold; color: var(--color-important); margin-bottom: 5px;">GitHub Pages</div>
+<code>base_path</code> is specifically needed when you're deploying your site to GitHub Pages. Always set it to your repository name.
+For more details on how to setup a github pages website, <a href="https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site" title="" target="_blank" rel="noopener noreferrer">click here</a>.
+</div></p>
+<hr />
+<h3 id="3-branding-assets">3. Branding (Assets)</h3>
+<p>Customise the visual identity of your site by referencing files in your <code>assets/</code> directory.</p>
+<table><thead><tr><th style="text-align: left">Field</th><th style="text-align: left">Type</th><th style="text-align: left">Description</th></tr></thead><tbody>
+<tr><td style="text-align: left"><code>navbar_logo</code></td><td style="text-align: left">String</td><td style="text-align: left">The filename of the logo shown in the top-left of the navbar.</td></tr>
+<tr><td style="text-align: left"><code>favicon</code></td><td style="text-align: left">String</td><td style="text-align: left">The filename of the icon shown in the browser tab.</td></tr>
+</tbody></table>
+<p><strong>Example:</strong></p>
+<pre><code class="language-yaml">navbar_logo: "logo.png"
+favicon: "favicon.ico"
+</code></pre>
+<hr />
+<h3 id="4-theming-dual-theme-support">4. Theming (Dual-Theme Support)</h3>
+<p>Verdocs features full support for Light and Dark modes. You can customise both independently via the <code>theme</code> and <code>dark_theme</code> sections.</p>
+<h4 id="standard-theme-fields">Standard Theme Fields</h4><table><thead><tr><th style="text-align: left">Field</th><th style="text-align: left">Description</th></tr></thead><tbody>
+<tr><td style="text-align: left"><code>primary_color</code></td><td style="text-align: left">The accent color used for links, active sidebar items, and progress bars.</td></tr>
+<tr><td style="text-align: left"><code>background_color</code></td><td style="text-align: left">The main background color of the documentation pages.</td></tr>
+<tr><td style="text-align: left"><code>text_color</code></td><td style="text-align: left">The primary font color for body text.</td></tr>
+<tr><td style="text-align: left"><code>colors</code></td><td style="text-align: left">A map of semantic tags (admonitions) to their respective hex colors.</td></tr>
+</tbody></table>
+<h4 id="semantic-colors-admonitions">Semantic Colors (Admonitions)</h4>
+<p>The <code>colors</code> section (aliased as <code>admonitions</code>) allows you to define the brand colors for callouts like Tips, Notes, and Warnings.</p>
+<p><strong>Example Configuration:</strong></p>
+<pre><code class="language-yaml">theme:
+  primary_color: "#007bff"
+  background_color: "#ffffff"
+  text_color: "#333333"
+  colors:
+    tip: "#28a745"
+    note: "#17a2b8"
+    warn: "#ffc107"
+    important: "#fd7e14"
+    danger: "#dc3545"
+    error: "#bd2130"
+    custom_tag: "#722ed1" # You can add as many as you want!
+
+dark_theme:
+  primary_color: "#007bff"
+  background_color: "#0d1117"
+  text_color: "#c9d1d9"
+  colors:
+    tip: "#2ea043"
+    # ... define other dark mode variants here
+</code></pre>
+<h2 id="how-to-apply-changes">How to Apply Changes</h2>
+<ol>
+<li><strong>Modify <code>config.yml</code></strong>: Open the file in your preferred editor and update the values.</li>
+<li><strong>Preview</strong>: If the preview server is running (<code>verdocs preview</code>), it will detect the changes and reload the site automatically.</li>
+<li><strong>Generate</strong>: For production, run <code>verdocs generate</code> to bake these settings into your static HTML files.</li>
+</ol>
+<p><div class="admonition" style="padding: 10px 15px; margin-bottom: 15px; border-left: 5px solid var(--color-tip); background-color: var(--bg-color-tip); border-radius: 6px; color: inherit;"><div style="font-weight: bold; color: var(--color-tip); margin-bottom: 5px;">Hex Only</div>
+Verdocs currently supports standard 6-digit hex codes (e.g., <code>#FFFFFF</code>) for all color fields.
+</div></p>
 
         </div>
         <div id="minimap">
         <div class="toc-title">On this page</div>
-        <a href="#grammar-and-structure" class="toc-item" style="padding-left: 0px;">Grammar and Structure</a>
-<a href="#documentation-sections" class="toc-item" style="padding-left: 0px;">Documentation Sections</a>
+        <a href="#the-config-yml-structure" class="toc-item" style="padding-left: 0px;">The config.yml Structure</a>
+<a href="#1-general-metadata" class="toc-item" style="padding-left: 15px;">1. General Metadata</a>
+<a href="#2-subfolder-hosting" class="toc-item" style="padding-left: 15px;">2. Subfolder Hosting</a>
+<a href="#3-branding-assets" class="toc-item" style="padding-left: 15px;">3. Branding (Assets)</a>
+<a href="#4-theming-dual-theme-support" class="toc-item" style="padding-left: 15px;">4. Theming (Dual-Theme Support)</a>
+<a href="#standard-theme-fields" class="toc-item" style="padding-left: 30px;">Standard Theme Fields</a>
+<a href="#semantic-colors-admonitions" class="toc-item" style="padding-left: 30px;">Semantic Colors (Admonitions)</a>
+<a href="#how-to-apply-changes" class="toc-item" style="padding-left: 0px;">How to Apply Changes</a>
     </div>
     </div>
     <div id="sidebar-overlay" onclick="toggleSidebar()"></div>

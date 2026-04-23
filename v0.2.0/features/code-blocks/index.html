@@ -410,7 +410,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
     <script>
         window.__verdocs_version = "1776952164";
-        window.__verdocs_current_version_name = "v0.1.0";
+        window.__verdocs_current_version_name = "v0.2.0";
         window.__verdocs_base_path = "/verdocs";
 
         function setTheme(theme) {
@@ -619,7 +619,7 @@
                 <div id="mobile-menu-toggle" onclick="toggleSidebar()">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
                 </div>
-                <img src="/verdocs/assets/verdocs-logo.png" alt="Logo" style="height: 32px; cursor: pointer;" onclick="window.location.href='/verdocs/v0.1.0/home'">
+                <img src="/verdocs/assets/verdocs-logo.png" alt="Logo" style="height: 32px; cursor: pointer;" onclick="window.location.href='/verdocs/v0.2.0/home'">
             </div>
             <div id="navbar-right" style="display: flex; align-items: center;">
                 <div id="search-bar-trigger" onclick="openSearch()">
@@ -642,37 +642,53 @@
         <div id="sidebar">
             <div id="version-selector-container">
                 <select onchange="switchVersion(this.value)">
-                    <option value="v0.1.0" selected>v0.1.0</option>
-<option value="v0.2.0" >v0.2.0</option>
+                    <option value="v0.1.0" >v0.1.0</option>
+<option value="v0.2.0" selected>v0.2.0</option>
                 </select>
             </div>
-            <a href="/verdocs/v0.1.0/home" class="sidebar-item " style="padding-left: 20px;">Home</a><a href="/verdocs/v0.1.0/command-line" class="sidebar-item " style="padding-left: 20px;">Command Line</a><a href="/verdocs/v0.1.0/core-concepts" class="sidebar-item active" style="padding-left: 20px;">Core Concepts</a><div class="sidebar-group expanded"><a href="/verdocs/v0.1.0/core-concepts/admonitions" class="sidebar-item " style="padding-left: 35px;">Admonitions</a><a href="/verdocs/v0.1.0/core-concepts/path-resolution" class="sidebar-item " style="padding-left: 35px;">Path Resolution</a><a href="/verdocs/v0.1.0/core-concepts/versions" class="sidebar-item " style="padding-left: 35px;">Versions</a></div><a href="/verdocs/v0.1.0/customisation" class="sidebar-item " style="padding-left: 20px;">Customisation</a><a href="/verdocs/v0.1.0/deployment" class="sidebar-item " style="padding-left: 20px;">Deployment</a><a href="/verdocs/v0.1.0/features" class="sidebar-item " style="padding-left: 20px;">Features</a><div class="sidebar-group "><a href="/verdocs/v0.1.0/features/code-blocks" class="sidebar-item " style="padding-left: 35px;">Code Blocks</a><a href="/verdocs/v0.1.0/features/minimap" class="sidebar-item " style="padding-left: 35px;">Minimap</a><a href="/verdocs/v0.1.0/features/preview-server" class="sidebar-item " style="padding-left: 35px;">Preview Server</a><a href="/verdocs/v0.1.0/features/search" class="sidebar-item " style="padding-left: 35px;">Search</a><a href="/verdocs/v0.1.0/features/sidebar" class="sidebar-item " style="padding-left: 35px;">Sidebar</a></div><a href="/verdocs/v0.1.0/project-requirements" class="sidebar-item " style="padding-left: 20px;">Project Requirements</a><a href="/verdocs/v0.1.0/quick-start" class="sidebar-item " style="padding-left: 20px;">Quick Start</a>
+            <a href="/verdocs/v0.2.0/home" class="sidebar-item " style="padding-left: 20px;">Home</a><a href="/verdocs/v0.2.0/command-line" class="sidebar-item " style="padding-left: 20px;">Command Line</a><a href="/verdocs/v0.2.0/core-concepts" class="sidebar-item " style="padding-left: 20px;">Core Concepts</a><div class="sidebar-group "><a href="/verdocs/v0.2.0/core-concepts/admonitions" class="sidebar-item " style="padding-left: 35px;">Admonitions</a><a href="/verdocs/v0.2.0/core-concepts/path-resolution" class="sidebar-item " style="padding-left: 35px;">Path Resolution</a><a href="/verdocs/v0.2.0/core-concepts/versions" class="sidebar-item " style="padding-left: 35px;">Versions</a></div><a href="/verdocs/v0.2.0/customisation" class="sidebar-item " style="padding-left: 20px;">Customisation</a><a href="/verdocs/v0.2.0/deployment" class="sidebar-item " style="padding-left: 20px;">Deployment</a><a href="/verdocs/v0.2.0/features" class="sidebar-item " style="padding-left: 20px;">Features</a><div class="sidebar-group expanded"><a href="/verdocs/v0.2.0/features/code-blocks" class="sidebar-item active" style="padding-left: 35px;">Code Blocks</a><a href="/verdocs/v0.2.0/features/minimap" class="sidebar-item " style="padding-left: 35px;">Minimap</a><a href="/verdocs/v0.2.0/features/preview-server" class="sidebar-item " style="padding-left: 35px;">Preview Server</a><a href="/verdocs/v0.2.0/features/search" class="sidebar-item " style="padding-left: 35px;">Search</a><a href="/verdocs/v0.2.0/features/sidebar" class="sidebar-item " style="padding-left: 35px;">Sidebar</a></div><a href="/verdocs/v0.2.0/project-requirements" class="sidebar-item " style="padding-left: 20px;">Project Requirements</a><a href="/verdocs/v0.2.0/quick-start" class="sidebar-item " style="padding-left: 20px;">Quick Start</a>
         </div>
         <div id="main-content">
-            <h1>Core Concepts</h1>
-<p>Verdocs is an opinionated documentation generator designed for performance and ease of use. To achieve this, it employs a few unique "grammar" rules and a strict project structure that ensures consistency across different versions of your documentation.</p>
-<h2 id="grammar-and-structure">Grammar and Structure</h2>
-<p>Unlike generic static site generators, Verdocs is specifically tuned for documentation. Its primary differentiators include:</p>
+            <h1>Code Blocks and Developer UX</h1>
+<p>Verdocs is built with developer documentation in mind. It includes several built-in features to make code blocks more useful and visually appealing.</p>
+<h2 id="syntax-highlighting">Syntax Highlighting</h2>
+<p>Verdocs includes <strong>Highlight.js</strong> (v11.9.0) with a customized version of the <strong>GitHub Dark</strong> theme for all code blocks.</p>
+<h3 id="supported-languages">Supported Languages</h3>
+<p>By using standard Markdown fence syntax, you can specify the language of your code block for optimized highlighting:</p>
+<pre><code class="language-markdown">```rust
+fn main() {
+    println!("Hello, Verdocs!");
+}
+</code></pre>
+<p>It will render as:</p>
+<pre><code class="language-rust">fn main() {
+    println!("Hello, Verdocs!");
+}
+</code></pre>
+<p>Verdocs supports dozens of popular programming languages including Rust, JavaScript, Python, Bash, YAML, and many others.</p>
+<h2 id="enhanced-developer-experience">Enhanced Developer Experience</h2>
+<p>In addition to syntax highlighting, Verdocs automatically injects several features into every code block to enhance usability:</p>
 <ol>
-<li><strong>Strict Versioning:</strong> Documentation isn't just a collection of files; it's a versioned history. The folder structure itself defines the available versions of your site.</li>
-<li><strong>Native Admonitions:</strong> Verdocs introduces a custom syntax for callouts (tips, warnings, etc.) that are rendered beautifully without external plugins.</li>
-<li><strong>Intelligent Path Resolution:</strong> It handles complex relative and global linking strategies, making it easy to move files without breaking links or image references.</li>
-<li><strong>Zero-Config Search:</strong> A client-side search index is automatically generated for every version, ensuring high-speed search functionality.</li>
+<li><strong>Language Labels:</strong> Every code block is automatically tagged with its language in the top-left corner (e.g., "RUST", "BASH", "YAML").</li>
+<li><strong>Copy-to-Clipboard Button:</strong> Each code block features a built-in copy button that appears on hover, making it easy for users to grab code snippets.</li>
+<li><strong>Responsive Layout:</strong> Code blocks are styled with a clean, dark interface and include horizontal scrolling for long lines of code.</li>
 </ol>
-<h2 id="documentation-sections">Documentation Sections</h2>
-<p>Explore the core features of Verdocs in detail:</p>
-<table><thead><tr><th style="text-align: left">Section</th><th style="text-align: left">Description</th></tr></thead><tbody>
-<tr><td style="text-align: left"><a href="/verdocs/v0.1.0/project-requirements">Project Requirements</a></td><td style="text-align: left">Mandatory directory structure and file naming rules.</td></tr>
-<tr><td style="text-align: left"><a href="/verdocs/v0.1.0/core-concepts/admonitions">Admonitions</a></td><td style="text-align: left">How to use and customize color-coded callouts.</td></tr>
-<tr><td style="text-align: left"><a href="/verdocs/v0.1.0/core-concepts/path-resolution">Path Resolution</a></td><td style="text-align: left">Understanding relative and global (<code>@/</code>) linking.</td></tr>
-<tr><td style="text-align: left"><a href="/verdocs/v0.1.0/core-concepts/versions">Versions</a></td><td style="text-align: left">Naming conventions and managing multiple documentation versions.</td></tr>
-</tbody></table>
+<h2 id="optimization-tips">Optimization Tips</h2>
+<ul>
+<li><strong>Explicit Language Specification:</strong> Always specify the language in your Markdown fence blocks (e.g., <code>```rust</code> instead of just <code>```</code>) to ensure the correct syntax highlighting and language label are applied.</li>
+<li><strong>Clean Snippets:</strong> Verdocs strips leading/trailing whitespace to ensure your code snippets are clean and ready to use.</li>
+</ul>
+<p><div class="admonition" style="padding: 10px 15px; margin-bottom: 15px; border-left: 5px solid var(--color-note); background-color: var(--bg-color-note); border-radius: 6px; color: inherit;"><div style="font-weight: bold; color: var(--color-note); margin-bottom: 5px;">Accessibility</div>
+Verdocs ensures high contrast within code blocks to maintain accessibility for all users, regardless of their visual preferences.
+</div></p>
 
         </div>
         <div id="minimap">
         <div class="toc-title">On this page</div>
-        <a href="#grammar-and-structure" class="toc-item" style="padding-left: 0px;">Grammar and Structure</a>
-<a href="#documentation-sections" class="toc-item" style="padding-left: 0px;">Documentation Sections</a>
+        <a href="#syntax-highlighting" class="toc-item" style="padding-left: 0px;">Syntax Highlighting</a>
+<a href="#supported-languages" class="toc-item" style="padding-left: 15px;">Supported Languages</a>
+<a href="#enhanced-developer-experience" class="toc-item" style="padding-left: 0px;">Enhanced Developer Experience</a>
+<a href="#optimization-tips" class="toc-item" style="padding-left: 0px;">Optimization Tips</a>
     </div>
     </div>
     <div id="sidebar-overlay" onclick="toggleSidebar()"></div>
