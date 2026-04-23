@@ -1,4 +1,5 @@
-# verdocs ![Version](https://img.shields.io/badge/Version-0.2.0-blue.svg)
+# Verdocs 
+![Version](https://img.shields.io/badge/Version-0.2.0-blue.svg)
 
 ![Banner](./resources/verdocs-logo-with-name.jpeg)
 
