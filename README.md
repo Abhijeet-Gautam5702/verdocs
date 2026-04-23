@@ -7,12 +7,28 @@ A high-performance, version-aware static documentation site generator built in R
 Verdocs is designed to help you create beautiful, searchable, and versioned documentation for your projects with minimal effort.
 
 ## Key Features
-
 - **Version-Native**: Manage multiple documentation versions via folder structure.
 - **Blazing Fast**: Near-instant builds leveraging Rust.
 - **Zero-Config Search**: Minimal client-side search across all versions.
 - **Live Reload**: See changes instantly as you edit in development.
 - **Easy Deployment**: Generate structured files for VPS, Vercel, and GitHub Pages deployment in a single command.
+
+## CLI Installation
+
+1. Install Verdocs using the installer script:
+```bash
+curl -fsSL https://raw.githubusercontent.com/Abhijeet-Gautam5702/verdocs/main/scripts/install.sh | bash
+```
+
+2. Verify installation:
+```bash
+which verdocs # locate the binary
+verdocs --version # check version
+```
+
+*For the complete installation and usage guide, visit the "Quickstart" section of the [official documentation](https://abhijeet-gautam5702.github.io/verdocs/)*
+
+---
 
 ## Local Development
 
